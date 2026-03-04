@@ -10,7 +10,7 @@ const TEAM = [
   },
   {
     name: 'Mateusz Kołodziejczyk',
-    role: 'Frontend',
+    role: 'Frontend (fuck you)',
     description: 'EL Idiot.',
   },
 ]
