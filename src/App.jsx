@@ -6,12 +6,12 @@ const TEAM = [
   {
     name: 'Brajan Szczepańczyk',
     role: 'Backend',
-    description: 'El Sigma.',
+    description: 'El Idiot 1.',
   },
   {
     name: 'Mateusz Kołodziejczyk',
-    role: 'Frontend (fuck you)',
-    description: 'EL Idiot.',
+    role: 'Frontend',
+    description: 'EL Idiot 2.',
   },
 ]
 

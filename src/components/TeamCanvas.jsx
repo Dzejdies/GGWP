@@ -19,7 +19,7 @@ const SECTIONS = [
     id: 'strengths',
     title: 'Mocne strony',
     icon: '💪',
-    content: ['Frontend development (kys)', 'Projektowanie UI/UX (ta fr)', 'Szybkie prototypowanie', 'Praca zespołowa'],
+    content: ['Frontend development', 'Projektowanie UI/UX', 'Szybkie prototypowanie', 'Praca zespołowa'],
     wide: false,
   },
   {
