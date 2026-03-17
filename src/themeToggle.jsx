@@ -32,7 +32,7 @@ export default function ThemeToggle() {
         minWidth: '120px'
       }}
     >
-      {isDark ? '🌙 DARK' : '☀️ LIGHT'}
+      {isDark ? '🌙 DARK' : '👽 LIGHT'}
     </button>
   );
 }

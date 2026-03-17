@@ -7,12 +7,12 @@ const TEAM = [
   {
     name: 'Brajan Szczepańczyk',
     role: 'Backend',
-    description: 'Vibe coder 1.',
+    description: 'Umiem w Javę (2/10) /s',
   },
   {
     name: 'Mateusz Kołodziejczyk',
     role: 'Frontend',
-    description: 'Vibe coder 2.',
+    description: 'Umiem w jezyk programowania HTML (3/10) /s',
   },
 ]
 
@@ -47,8 +47,9 @@ export default function App() {
       </main>
 
       <footer className="page-footer">
-        <div className="container">
-          <p>Projekt zaliczeniowy &mdash; {new Date().getFullYear()}</p>
+        <div className="container flex">
+          <p>Projekt &mdash; {new Date().getFullYear()}</p>
+          <p className="ml-auto">Ostatnio aktualizowany: {__BUILD_DATE__}</p>
         </div>
       </footer>
     </div>

@@ -12,7 +12,7 @@ const SECTIONS = [
     id: 'values',
     title: 'Wartości',
     icon: '💡',
-    content: ['Kreatywność', 'Szczerość', 'Jakość ponad ilość', 'Wzajemny szacunek'],
+    content: ['Kreatywność', 'Szczerość', 'Jakość ponad ilość', 'Wzajemny szacunek', 'Nienawiść do Analizy'],
     wide: false,
   },
   {
@@ -26,14 +26,14 @@ const SECTIONS = [
     id: 'roles',
     title: 'Role',
     icon: '👤',
-    content: ['Brajan — Backend', 'Mateusz — Frontend'],
+    content: ['Brajan — Backend lub Frontend', 'Mateusz — Frontend lub backend'],
     wide: false,
   },
   {
     id: 'rules',
     title: 'Zasady',
     icon: '📋',
-    content: ['Regularne spotkania co tydzień', 'Code review przed merge\'em', 'Komunikacja przez GitHub Issues'],
+    content: ['Branch Main jest święty, nie pushuj', 'Code review przed mergem', 'Ja merguje (no chyba ze nie)'],
     wide: false,
   },
   {
