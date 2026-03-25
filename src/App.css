@@ -57,6 +57,28 @@ main.container {
   flex-wrap: wrap;
 }
 
+/* Analysis button */
+.btn-analysis {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #ffffff;
+  background: var(--color-accent);
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.625rem 1.5rem;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.btn-analysis:hover {
+  opacity: 0.85;
+}
+
 /* Footer */
 .page-footer {
   background: var(--color-surface);

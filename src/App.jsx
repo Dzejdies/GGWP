@@ -1,7 +1,9 @@
+import { useState } from 'react'
 import './App.css'
 import TeamMember from './components/TeamMember'
 import TeamCanvas from './components/TeamCanvas'
-import ThemeToggle from './themeToggle';
+import ThemeToggle from './themeToggle'
+import AnalysisPage from './pages/AnalysisPage'
 
 const TEAM = [
   {
@@ -17,6 +19,12 @@ const TEAM = [
 ]
 
 export default function App() {
+  const [view, setView] = useState('home')
+
+  if (view === 'analysis') {
+    return <AnalysisPage onBack={() => setView('home')} />
+  }
+
   return (
     <div className="page min-h-screen transition-colors duration-300">
       <header className="page-header relative">
@@ -42,6 +50,10 @@ export default function App() {
             ))}
           </div>
         </section>
+
+        <button className="btn-analysis" onClick={() => setView('analysis')}>
+          Analiza UX →
+        </button>
 
         <TeamCanvas />
       </main>

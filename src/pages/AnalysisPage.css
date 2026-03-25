@@ -1,0 +1,269 @@
+/* AnalysisPage layout */
+.analysis-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--color-page-bg);
+  color: var(--color-text-main);
+}
+
+.analysis-page main.container {
+  padding-top: 2.5rem;
+  padding-bottom: 3rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+/* Back button in header */
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-accent);
+  background: transparent;
+  border: 1px solid var(--color-accent);
+  border-radius: var(--radius);
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.btn-back:hover {
+  background-color: var(--color-accent);
+  color: #ffffff;
+}
+
+/* Section layout */
+.analysis-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.analysis-section__header {
+  margin-bottom: 0.25rem;
+}
+
+.analysis-section__title {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.analysis-section__subtitle {
+  font-size: 0.9375rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+/* Grid */
+.analysis-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.analysis-grid--3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.analysis-grid--2 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+/* Card */
+.analysis-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.analysis-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625rem;
+}
+
+.analysis-card__icon {
+  font-size: 1.25rem;
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.analysis-card__title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+/* List */
+.analysis-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.analysis-list li {
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  padding-left: 1rem;
+  position: relative;
+  line-height: 1.55;
+}
+
+.analysis-list li::before {
+  content: '–';
+  position: absolute;
+  left: 0;
+  color: var(--color-accent);
+}
+
+/* Persona card extras */
+.persona-card__tag {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.persona-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.persona-level {
+  border-left: 2px solid var(--color-accent);
+  padding-left: 0.875rem;
+}
+
+.persona-level__number {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-accent);
+  display: block;
+  margin-bottom: 0.1rem;
+}
+
+.persona-level__label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.persona-level__text {
+  font-size: 0.875rem;
+  color: var(--color-text);
+  line-height: 1.55;
+}
+
+/* Garrett levels */
+.garrett-levels {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.garrett-level {
+  display: flex;
+  gap: 1.25rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.garrett-level__number {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  opacity: 0.35;
+  min-width: 2.25rem;
+  line-height: 1;
+  padding-top: 0.1rem;
+}
+
+.garrett-level__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.garrett-level__heading {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+}
+
+.garrett-level__icon {
+  font-size: 1.25rem;
+}
+
+.garrett-level__name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.garrett-level__subtitle {
+  font-size: 0.8125rem;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+.garrett-level__body {
+  display: flex;
+  gap: 2rem;
+}
+
+.garrett-level__field {
+  flex: 1;
+}
+
+.garrett-level__field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.garrett-level__field-text {
+  font-size: 0.9375rem;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .analysis-grid--3,
+  .analysis-grid--2 {
+    grid-template-columns: 1fr;
+  }
+
+  .garrett-level__body {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
