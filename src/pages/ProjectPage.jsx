@@ -84,25 +84,23 @@ const VALUES = [
 
 export default function ProjectPage({ onBack }) {
   return (
-    <div className="project-page">
-      <header className="page-header relative">
-        <div className="container">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="page-header__label">Projektowanie Interfejsów WWW</p>
-              <h1 className="page-header__title">O projekcie</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="btn-back" onClick={onBack}>
-                ← Wróć
-              </button>
-              <ThemeToggle />
-            </div>
+    <div className="gh-page">
+      <header className="gh-header">
+        <div className="gh-header__inner">
+          <div>
+            <p className="gh-header__label">Projektowanie Interfejsów WWW</p>
+            <h1 className="gh-title" data-text="O projekcie">O projekcie</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="gh-btn" style={{ marginTop: 0, marginBottom: 0 }} onClick={onBack}>
+              ← Wróć
+            </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="container">
+      <main className="gh-main">
         {/* Hero */}
         <section className="project-hero">
           <span className="project-hero__icon">🎮</span>
@@ -213,10 +211,10 @@ export default function ProjectPage({ onBack }) {
         </section>
       </main>
 
-      <footer className="page-footer">
-        <div className="container flex">
+      <footer className="gh-footer">
+        <div className="gh-footer__inner">
           <p>Projekt &mdash; {new Date().getFullYear()}</p>
-          <p className="ml-auto">GG WP for Good &mdash; Fundacja charytatywna</p>
+          <p>O projekcie</p>
         </div>
       </footer>
     </div>

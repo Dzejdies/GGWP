@@ -7,35 +7,33 @@ import GarrettLevelsSection from '../components/analysis/GarrettLevelsSection'
 
 export default function AnalysisPage({ onBack }) {
   return (
-    <div className="analysis-page">
-      <header className="page-header relative">
-        <div className="container">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="page-header__label">Projektowanie Interfejsów WWW</p>
-              <h1 className="page-header__title">Analiza UX</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="btn-back" onClick={onBack}>
-                ← Wróć
-              </button>
-              <ThemeToggle />
-            </div>
+    <div className="gh-page">
+      <header className="gh-header">
+        <div className="gh-header__inner">
+          <div>
+            <p className="gh-header__label">Projektowanie Interfejsów WWW</p>
+            <h1 className="gh-title" data-text="Analiza UX">Analiza UX</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="gh-btn" style={{ marginTop: 0, marginBottom: 0 }} onClick={onBack}>
+              ← Wróć
+            </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="container">
+      <main className="gh-main">
         <TargetGroupSection />
         <PersonasSection />
         <OrganizerNeedsSection />
         <GarrettLevelsSection />
       </main>
 
-      <footer className="page-footer">
-        <div className="container flex">
+      <footer className="gh-footer">
+        <div className="gh-footer__inner">
           <p>Projekt &mdash; {new Date().getFullYear()}</p>
-          <p className="ml-auto">GG WP for Good &mdash; Analiza UX</p>
+          <p>Analiza UX</p>
         </div>
       </footer>
     </div>

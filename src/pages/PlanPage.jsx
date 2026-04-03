@@ -82,7 +82,7 @@ const ROLES = [
   {
     name: 'Brajan Szczepańczyk',
     initials: 'BS',
-    gradient: ['#4f46e5', '#818cf8'],
+    gradient: 'var(--gh-avatar-g1)',
     tasks: [
       'Projektowanie i implementacja backendu (Java / Spring)',
       'Modelowanie bazy danych (PostgreSQL)',
@@ -94,7 +94,7 @@ const ROLES = [
   {
     name: 'Mateusz Kołodziejczyk',
     initials: 'MK',
-    gradient: ['#0891b2', '#67e8f9'],
+    gradient: 'var(--gh-avatar-g2)',
     tasks: [
       'Implementacja frontendu (React + Vite)',
       'Budowa komponentów i stron',
@@ -130,25 +130,23 @@ const PRINCIPLES = [
 
 export default function PlanPage({ onBack }) {
   return (
-    <div className="plan-page">
-      <header className="page-header relative">
-        <div className="container">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="page-header__label">Projektowanie Interfejsów WWW</p>
-              <h1 className="page-header__title">Plan realizacji</h1>
-            </div>
-            <div className="flex items-center gap-3">
-              <button className="btn-back" onClick={onBack}>
-                ← Wróć
-              </button>
-              <ThemeToggle />
-            </div>
+    <div className="gh-page">
+      <header className="gh-header">
+        <div className="gh-header__inner">
+          <div>
+            <p className="gh-header__label">Projektowanie Interfejsów WWW</p>
+            <h1 className="gh-title" data-text="Plan realizacji">Plan realizacji</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <button className="gh-btn" style={{ marginTop: 0, marginBottom: 0 }} onClick={onBack}>
+              ← Wróć
+            </button>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
-      <main className="container">
+      <main className="gh-main">
         {/* Intro */}
         <div className="plan-intro">
           <span className="plan-intro__icon">🗺️</span>
@@ -241,7 +239,7 @@ export default function PlanPage({ onBack }) {
               <div key={role.name} className="role-card">
                 <div
                   className="role-card__avatar"
-                  style={{ background: `linear-gradient(135deg, ${role.gradient[0]}, ${role.gradient[1]})` }}
+                  style={{ background: role.gradient }}
                 >
                   {role.initials}
                 </div>
@@ -286,10 +284,10 @@ export default function PlanPage({ onBack }) {
         </div>
       </main>
 
-      <footer className="page-footer">
-        <div className="container flex">
+      <footer className="gh-footer">
+        <div className="gh-footer__inner">
           <p>Projekt &mdash; {new Date().getFullYear()}</p>
-          <p className="ml-auto">GG WP for Good &mdash; Plan realizacji</p>
+          <p>Plan realizacji</p>
         </div>
       </footer>
     </div>

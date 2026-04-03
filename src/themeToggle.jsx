@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(() => {
-    return localStorage.getItem('theme') === 'dark' || 
-    (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
+    return localStorage.getItem('theme') === 'dark' ||
+      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)
   });
 
   useEffect(() => {
@@ -21,15 +21,16 @@ export default function ThemeToggle() {
     <button
       onClick={() => setIsDark(!isDark)}
       style={{
-        backgroundColor: '#6366f1',
-        color: 'white',
+        backgroundColor: 'var(--gh-purple)',
+        color: 'var(--gh-title-c)',
         padding: '10px 20px',
         borderRadius: '8px',
         fontWeight: 'bold',
         cursor: 'pointer',
-        border: 'none',
+        border: '1px solid var(--gh-border)',
         display: 'block',
-        minWidth: '120px'
+        minWidth: '120px',
+        transition: 'all 0.2s ease'
       }}
     >
       {isDark ? '🌙 DARK' : '👽 LIGHT'}
