@@ -564,3 +564,51 @@
 .modal__success-icon {
   font-size: 3rem;
 }
+
+/* ── Modal & page light mode overrides ── */
+:root .modal-overlay {
+  background: rgba(0, 0, 0, 0.35);
+}
+
+:root .modal {
+  background: #fff;
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 40px rgba(99, 102, 241, 0.12);
+}
+
+:root .modal__input {
+  background: rgba(99, 102, 241, 0.04);
+  border-color: rgba(100, 116, 139, 0.2);
+  color: var(--gh-title-c);
+}
+
+:root .modal__input:focus {
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+:root .modal__dial-select {
+  background-color: rgba(99, 102, 241, 0.04);
+  border-color: rgba(100, 116, 139, 0.2);
+  color: var(--gh-title-c);
+}
+
+:root .modal__dial-select:focus {
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+/* Dark mode keeps originals */
+.dark .modal-overlay {
+  background: rgba(0, 0, 0, 0.75);
+}
+
+.dark .modal {
+  background: var(--gh-surface);
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 40px rgba(124, 58, 237, 0.3);
+}
+
+.dark .modal__input {
+  background: rgba(0, 0, 0, 0.3);
+}

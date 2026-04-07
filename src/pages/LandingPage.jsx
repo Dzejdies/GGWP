@@ -108,7 +108,7 @@ function useTyping(phrases, speed = 60, pause = 2200) {
     return displayed
 }
 
-export default function LandingPage({ onNavigate }) {
+export default function LandingPage({ onNavigate, user, onAuthChange }) {
     const [stats, setStats] = useState(STATS_FALLBACK)
 
     const subtitle = useTyping([
@@ -129,8 +129,8 @@ export default function LandingPage({ onNavigate }) {
     }, [])
 
     return (
-        <div className="gh-page" style={{ background: '#000' }}>
-            <Navbar onNavigate={onNavigate} currentView="landing" />
+        <div className="gh-page">
+            <Navbar onNavigate={onNavigate} currentView="landing" user={user} onAuthChange={onAuthChange} />
             {/* Hero */}
             <section className="lp-hero">
                 <Particles />

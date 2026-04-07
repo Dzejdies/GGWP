@@ -129,10 +129,10 @@ const PRINCIPLES = [
   },
 ]
 
-export default function PlanPage({ onNavigate }) {
+export default function PlanPage({ onNavigate, user, onAuthChange }) {
   return (
     <div className="gh-page">
-      <Navbar onNavigate={onNavigate} currentView="plan" />
+      <Navbar onNavigate={onNavigate} currentView="plan" user={user} onAuthChange={onAuthChange} />
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
         {/* Intro */}

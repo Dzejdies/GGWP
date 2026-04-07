@@ -2,6 +2,186 @@
    Landing Page — GG WP for Good
    ============================================ */
 
+/* ── Light mode overrides ── */
+:root .lp-hero::before {
+    background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(99, 102, 241, 0.15) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 100% 80%, rgba(8, 145, 178, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 0% 100%, rgba(99, 102, 241, 0.05) 0%, transparent 50%),
+        var(--gh-bg);
+}
+
+:root .lp-hero::after {
+    background-image:
+        linear-gradient(rgba(99, 102, 241, 0.08) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(99, 102, 241, 0.08) 1px, transparent 1px);
+}
+
+:root .lp-hero__title {
+    color: var(--gh-title-c);
+    text-shadow:
+        -2px 0 0 rgba(239, 68, 68, 0.4),
+        2px 0 0 rgba(6, 182, 212, 0.4);
+}
+
+:root .lp-hero__title::before {
+    color: rgba(239, 68, 68, 0.3);
+}
+
+:root .lp-hero__title::after {
+    color: rgba(6, 182, 212, 0.3);
+}
+
+:root .lp-hero__subtitle {
+    color: var(--gh-muted);
+}
+
+:root .lp-hero__cta {
+    color: var(--gh-title-c);
+}
+
+:root .lp-stats {
+    border-color: rgba(99, 102, 241, 0.15);
+    background: var(--gh-surface);
+    backdrop-filter: none;
+}
+
+:root .lp-stat {
+    border-color: rgba(99, 102, 241, 0.1);
+}
+
+:root .lp-stat:hover {
+    background: rgba(99, 102, 241, 0.04);
+}
+
+:root .lp-section__title {
+    color: var(--gh-title-c);
+    text-shadow: none;
+}
+
+:root .lp-card {
+    background: var(--gh-surface);
+    border-color: var(--gh-border);
+}
+
+:root .lp-card:hover {
+    border-color: rgba(99, 102, 241, 0.4);
+    box-shadow: 0 0 20px rgba(99, 102, 241, 0.08);
+}
+
+:root .lp-card__title {
+    color: var(--gh-title-c);
+}
+
+:root .lp-step__dot {
+    background: var(--gh-bg);
+}
+
+:root .lp-step__title {
+    color: var(--gh-title-c);
+}
+
+:root .lp-cta {
+    background: linear-gradient(180deg, transparent, rgba(99, 102, 241, 0.04) 50%, transparent);
+}
+
+:root .lp-cta__title {
+    color: var(--gh-title-c);
+}
+
+:root .lp-footer {
+    border-color: var(--gh-border);
+    background: var(--gh-surface);
+}
+
+/* Dark mode keeps original styles */
+.dark .lp-hero::before {
+    background:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(124, 58, 237, 0.35) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 100% 80%, rgba(6, 182, 212, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse 50% 50% at 0% 100%, rgba(124, 58, 237, 0.1) 0%, transparent 50%),
+        #000;
+}
+
+.dark .lp-hero::after {
+    background-image:
+        linear-gradient(rgba(124, 58, 237, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(124, 58, 237, 0.06) 1px, transparent 1px);
+}
+
+.dark .lp-hero__title {
+    color: #fff;
+    text-shadow:
+        -3px 0 0 rgba(255, 0, 80, 0.7),
+        3px 0 0 rgba(0, 210, 255, 0.7);
+}
+
+.dark .lp-hero__title::before {
+    color: rgba(255, 0, 80, 0.5);
+}
+
+.dark .lp-hero__title::after {
+    color: rgba(0, 210, 255, 0.5);
+}
+
+.dark .lp-hero__cta {
+    color: #fff;
+}
+
+.dark .lp-stats {
+    border-color: rgba(124, 58, 237, 0.2);
+    background: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+}
+
+.dark .lp-stat {
+    border-color: rgba(124, 58, 237, 0.15);
+}
+
+.dark .lp-stat:hover {
+    background: rgba(124, 58, 237, 0.05);
+}
+
+.dark .lp-section__title {
+    color: #fff;
+    text-shadow: -1px 0 0 rgba(255, 0, 80, 0.4), 1px 0 0 rgba(0, 210, 255, 0.4);
+}
+
+.dark .lp-card {
+    background: rgba(8, 8, 8, 0.9);
+    border-color: rgba(124, 58, 237, 0.2);
+}
+
+.dark .lp-card:hover {
+    border-color: rgba(124, 58, 237, 0.5);
+    box-shadow: 0 0 30px rgba(124, 58, 237, 0.12);
+}
+
+.dark .lp-card__title {
+    color: #fff;
+}
+
+.dark .lp-step__dot {
+    background: #000;
+}
+
+.dark .lp-step__title {
+    color: #fff;
+}
+
+.dark .lp-cta {
+    background: linear-gradient(180deg, transparent, rgba(124, 58, 237, 0.05) 50%, transparent);
+}
+
+.dark .lp-cta__title {
+    color: #fff;
+}
+
+.dark .lp-footer {
+    border-color: rgba(124, 58, 237, 0.15);
+    background: rgba(0, 0, 0, 0.8);
+}
+
 /* ── Navbar ── */
 .lp-nav {
     position: fixed;

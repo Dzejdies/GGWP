@@ -1,0 +1,333 @@
+/* ============================================
+   Account Page — Gaming Theme
+   ============================================ */
+
+/* ── Sections ── */
+.account-section {
+  background: var(--gh-surface);
+  border: 1px solid var(--gh-border);
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  transition: all 0.2s ease;
+}
+
+.account-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 14px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gh-purple), var(--gh-cyan));
+  opacity: 0.6;
+}
+
+.account-section__title {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gh-purple-lt);
+  margin-bottom: 1.5rem;
+}
+
+/* ── Avatar section ── */
+.account-avatar-section {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+}
+
+.account-avatar {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gh-purple), var(--gh-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  border: 3px solid rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 20px rgba(124, 58, 237, 0.3);
+  flex-shrink: 0;
+  transition: box-shadow 0.2s, border-color 0.2s;
+}
+
+.account-avatar:hover {
+  border-color: var(--gh-purple-lt);
+  box-shadow: 0 0 30px rgba(124, 58, 237, 0.5);
+}
+
+.account-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.account-avatar__initials {
+  font-family: 'Russo One', sans-serif;
+  font-size: 2rem;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.account-avatar__overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  opacity: 0;
+  transition: opacity 0.2s;
+  border-radius: 50%;
+}
+
+.account-avatar:hover .account-avatar__overlay {
+  opacity: 1;
+}
+
+.account-avatar-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.account-avatar-info__name {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.25rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--gh-title-c);
+}
+
+.account-avatar-info__email {
+  font-size: 0.8125rem;
+  color: var(--gh-muted);
+}
+
+.account-avatar-info__btn {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gh-purple-lt);
+  background: none;
+  border: 1px solid var(--gh-border);
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  margin-top: 0.5rem;
+  transition: all 0.2s;
+  width: fit-content;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}
+
+.account-avatar-info__btn:hover {
+  border-color: var(--gh-purple-lt);
+  box-shadow: var(--gh-glow-sm);
+}
+
+.account-avatar-info__btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Inputs ── */
+.account-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gh-cyan);
+  display: block;
+  margin-top: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.account-label:first-of-type {
+  margin-top: 0;
+}
+
+.account-input {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--gh-border);
+  color: var(--gh-title-c);
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.account-input:focus {
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.account-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.account-textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.account-phone-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.account-dial-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--gh-border);
+  color: var(--gh-title-c);
+  padding: 0.75rem 0.5rem;
+  font-size: 0.9375rem;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 7.5rem;
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237c3aed' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  padding-right: 1.75rem;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.account-dial-select:focus {
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.2);
+}
+
+.account-phone-input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ── Status messages ── */
+.account-error {
+  font-size: 0.8rem;
+  color: #f87171;
+  margin-top: 0.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.account-success {
+  font-size: 0.8rem;
+  color: #4ade80;
+  margin-top: 0.5rem;
+}
+
+/* ── Danger zone ── */
+.account-danger {
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.account-danger::before {
+  background: linear-gradient(90deg, #f87171, #ef4444);
+}
+
+.account-danger__btn {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #f87171;
+  background: transparent;
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  padding: 0.75rem 2rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.account-danger__btn:hover {
+  border-color: #f87171;
+  box-shadow: 0 0 20px rgba(248, 113, 113, 0.2);
+  background: rgba(248, 113, 113, 0.05);
+}
+
+.account-danger__btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ── Delete modal ── */
+.account-delete-modal {
+  border-color: rgba(248, 113, 113, 0.4) !important;
+  box-shadow: 0 0 40px rgba(248, 113, 113, 0.2) !important;
+}
+
+/* ── Responsive ── */
+@media (max-width: 600px) {
+  .account-avatar-section {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+
+  .account-avatar-info {
+    align-items: center;
+  }
+
+  .account-section {
+    padding: 1.5rem 1rem;
+  }
+}
+
+/* ── Light mode overrides ── */
+:root .account-input {
+  background: rgba(99, 102, 241, 0.04);
+  border-color: rgba(100, 116, 139, 0.2);
+  color: var(--gh-title-c);
+}
+
+:root .account-input:focus {
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+:root .account-dial-select {
+  background-color: rgba(99, 102, 241, 0.04);
+  border-color: rgba(100, 116, 139, 0.2);
+  color: var(--gh-title-c);
+}
+
+:root .account-dial-select:focus {
+  border-color: var(--gh-purple);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+:root .account-avatar {
+  border-color: rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 20px rgba(99, 102, 241, 0.12);
+}
+
+:root .account-avatar:hover {
+  border-color: var(--gh-purple-lt);
+  box-shadow: 0 0 30px rgba(99, 102, 241, 0.2);
+}
+
+/* Dark mode */
+.dark .account-input {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dark .account-dial-select {
+  background-color: rgba(0, 0, 0, 0.3);
+}

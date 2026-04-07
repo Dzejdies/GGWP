@@ -1,0 +1,215 @@
+/* LoginModal — reuses .modal styles from ProjectPage.css */
+
+.login-modal__submit {
+  margin-top: 1rem;
+}
+
+.login-modal__forgot {
+  background: none;
+  border: none;
+  color: var(--gh-purple-lt);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 0.5rem;
+  text-align: left;
+  transition: color 0.15s;
+  font-family: 'Chakra Petch', sans-serif;
+}
+
+.login-modal__forgot:hover {
+  color: var(--gh-cyan);
+  text-decoration: underline;
+}
+
+/* Avatar as image in navbar */
+.navbar__user-avatar img,
+.navbar__sidebar-user-avatar img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* User badge in navbar */
+.navbar__user {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.navbar__user-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gh-purple), var(--gh-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.7rem;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+  border: 2px solid rgba(124, 58, 237, 0.4);
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.3);
+}
+
+.navbar__user-name {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gh-purple-lt);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navbar__login-btn {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gh-purple-lt);
+  background: none;
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  padding: 0.4rem 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 6px 100%, 0 calc(100% - 6px));
+}
+
+.navbar__login-btn:hover {
+  border-color: var(--gh-purple-lt);
+  box-shadow: var(--gh-glow-sm);
+  color: #fff;
+}
+
+.navbar__logout-btn {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gh-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.15s;
+}
+
+.navbar__logout-btn:hover {
+  color: #f87171;
+}
+
+/* Sidebar user section */
+.navbar__sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.25rem 2rem;
+  border-bottom: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.navbar__sidebar-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gh-purple), var(--gh-cyan));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.75rem;
+  color: #fff;
+  flex-shrink: 0;
+  border: 2px solid rgba(124, 58, 237, 0.4);
+}
+
+.navbar__sidebar-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.navbar__sidebar-user-name {
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gh-purple-lt);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navbar__sidebar-user-email {
+  font-size: 0.65rem;
+  color: var(--gh-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.navbar__sidebar-logout {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 2rem;
+  background: none;
+  border: none;
+  color: #f87171;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s;
+  border-top: 1px solid rgba(124, 58, 237, 0.15);
+}
+
+.navbar__sidebar-logout:hover {
+  background: rgba(248, 113, 113, 0.07);
+}
+
+@media (max-width: 600px) {
+  .navbar__user-name {
+    display: none;
+  }
+}
+
+/* ── Light mode overrides ── */
+:root .navbar__sidebar-user {
+  border-bottom-color: rgba(99, 102, 241, 0.1);
+}
+
+:root .navbar__sidebar-logout {
+  border-top-color: rgba(99, 102, 241, 0.1);
+}
+
+:root .navbar__sidebar-logout:hover {
+  background: rgba(248, 113, 113, 0.05);
+}
+
+:root .navbar__login-btn {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+:root .navbar__login-btn:hover {
+  color: var(--gh-title-c);
+}
+
+/* Dark mode */
+.dark .navbar__sidebar-user {
+  border-bottom-color: rgba(124, 58, 237, 0.15);
+}
+
+.dark .navbar__sidebar-logout {
+  border-top-color: rgba(124, 58, 237, 0.15);
+}

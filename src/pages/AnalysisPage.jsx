@@ -6,10 +6,10 @@ import PersonasSection from '../components/analysis/PersonasSection'
 import OrganizerNeedsSection from '../components/analysis/OrganizerNeedsSection'
 import GarrettLevelsSection from '../components/analysis/GarrettLevelsSection'
 
-export default function AnalysisPage({ onNavigate }) {
+export default function AnalysisPage({ onNavigate, user, onAuthChange }) {
   return (
     <div className="gh-page">
-      <Navbar onNavigate={onNavigate} currentView="analysis" />
+      <Navbar onNavigate={onNavigate} currentView="analysis" user={user} onAuthChange={onAuthChange} />
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
         <h1 className="gh-title" data-text="Analiza UX" style={{ marginBottom: '2rem' }}>Analiza UX</h1>

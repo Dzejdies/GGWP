@@ -8,6 +8,10 @@ import ProjectPage from './pages/ProjectPage'
 import PlanPage from './pages/PlanPage'
 import LandingPage from './pages/LandingPage'
 import Footer from './components/Footer'
+import ConfirmationPage from './pages/ConfirmationPage'
+import AccountPage from './pages/AccountPage'
+import { useEffect } from 'react'
+import { supabase } from './lib/supabase'
 
 const TEAM = [
   {
@@ -113,6 +117,31 @@ function GamingTeamMember({ name, role, description, index = 0 }) {
 
 export default function App() {
   const [view, setView] = useState('landing')
+  const [user, setUser] = useState(null)
+
+  useEffect(() => {
+    if (!supabase) return
+
+    // Restore session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setUser(session.user)
+    })
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN') {
+        setUser(session?.user ?? null)
+        if (window.location.hash.includes('access_token')) {
+          setView('confirmed')
+          window.history.replaceState(null, '', window.location.pathname)
+        }
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null)
+      }
+    })
+    return () => subscription.unsubscribe()
+  }, [])
+
+  const handleAuthChange = (newUser) => setUser(newUser)
 
   const navigate = (target) => {
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -120,25 +149,31 @@ export default function App() {
   }
 
   if (view === 'landing') {
-    return <LandingPage onNavigate={navigate} />
+    return <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
   }
 
   if (view === 'analysis') {
-    return <AnalysisPage onNavigate={navigate} />
+    return <AnalysisPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
   }
 
   if (view === 'project') {
-    return <ProjectPage onNavigate={navigate} />
+    return <ProjectPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
   }
 
   if (view === 'plan') {
-    return <PlanPage onNavigate={navigate} />
+    return <PlanPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
+  }
+  if (view === 'confirmed') {
+    return <ConfirmationPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
+  }
+  if (view === 'account') {
+    return <AccountPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
   }
 
   // 'home' — O zespole
   return (
     <div className="gh-page">
-      <Navbar onNavigate={navigate} currentView="home" />
+      <Navbar onNavigate={navigate} currentView="home" user={user} onAuthChange={handleAuthChange} />
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
         <h1 className="gh-title" data-text="O nas" style={{ marginBottom: '2rem' }}>O nas</h1>

@@ -67,6 +67,20 @@
   font-family: 'Chakra Petch', sans-serif;
   position: relative;
   overflow-x: hidden;
+  transition: background 0.3s ease, color 0.3s ease;
+}
+
+/* Smooth theme transition for all themed elements */
+.gh-page *,
+.gh-page *::before,
+.gh-page *::after {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+}
+
+/* Exclude animations from transition override */
+.gh-page .lp-particle,
+.gh-page .lp-hero__cursor {
+  transition: none !important;
 }
 
 /* CRT scanlines */

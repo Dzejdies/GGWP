@@ -181,17 +181,40 @@ function RegistrationModal({ onClose }) {
       setCustomDialError('Format: +XX lub +XXX (np. +351)')
       return
     }
+    if (!PASSWORD_REGEX.test(form.password)) {
+      setPasswordError("Hasło musi zawierać co najmniej 8 znaków, w tym jedną małą literę, jedną dużą literę i jedną cyfrę")
+      return
+    }
+    if (form.password !== form.password_confirm) {
+      setPasswordConfirmError("Hasła się nie zgadzają")
+      return
+    }
     if (!supabase) {
       setStatus('error')
       return
     }
     setStatus('loading')
     const fullPhone = `${effectiveDialCode} ${form.phone.trim()}`
-    const { error } = await supabase.from('registrations').insert([
-      { nickname: form.nickname, email: form.email, phone: fullPhone, message: form.message },
-    ])
+    const { data, error } = await supabase.auth.signUp({
+      email: form.email,
+      password: form.password,
+      options: {
+        data: {
+          //Metadata
+          display_name: form.nickname,
+          nickname: form.nickname,
+          phone: fullPhone,
+          message: form.message,
+        },
+        emailRedirectTo: window.location.origin + '/#confirmed'
+      }
+    })
     if (error) {
       console.error(error)
+      // Obsługa konkretnych błędów Supabase Auth
+      if (error.message.includes('already registered')) {
+        setEmailError('Ten e-mail jest już zarejestrowany')
+      }
       setStatus('error')
     } else {
       setStatus('success')
@@ -207,7 +230,7 @@ function RegistrationModal({ onClose }) {
         {status === 'success' ? (
           <div className="modal__success">
             <span className="modal__success-icon">✅</span>
-            <p>Zarejestrowano! Do zobaczenia na turnieju!</p>
+            <p>Zarejestrowano! Sprawdź skrzynkę pocztową aby potwierdzić maila i dokończyć rejstracje.</p>
             <button className="gh-btn" onClick={onClose}>Zamknij</button>
           </div>
         ) : (
@@ -319,7 +342,7 @@ function RegistrationModal({ onClose }) {
   )
 }
 
-export default function ProjectPage({ onNavigate }) {
+export default function ProjectPage({ onNavigate, user, onAuthChange }) {
   const [stats, setStats] = useState(STATS_FALLBACK)
   const [showModal, setShowModal] = useState(false)
 
@@ -338,7 +361,7 @@ export default function ProjectPage({ onNavigate }) {
   return (
     <div className="gh-page">
       {showModal && <RegistrationModal onClose={() => setShowModal(false)} />}
-      <Navbar onNavigate={onNavigate} currentView="project" />
+      <Navbar onNavigate={onNavigate} currentView="project" user={user} onAuthChange={onAuthChange} />
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
         <h1 className="gh-title" data-text="O projekcie" style={{ marginBottom: '2rem' }}>O projekcie</h1>

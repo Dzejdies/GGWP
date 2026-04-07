@@ -12,6 +12,7 @@
     background: rgba(0, 0, 0, 0.7);
     backdrop-filter: blur(14px);
     border-bottom: 1px solid rgba(124, 58, 237, 0.2);
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .navbar__logo {
@@ -224,4 +225,80 @@
 /* Spacer so page content doesn't hide under fixed nav */
 .navbar-spacer {
     height: 73px;
+}
+
+/* ── Light mode overrides ── */
+:root .navbar {
+    background: rgba(255, 255, 255, 0.85);
+    border-bottom-color: rgba(99, 102, 241, 0.15);
+}
+
+:root .navbar__logo {
+    color: var(--gh-title-c);
+}
+
+:root .navbar__overlay {
+    background: rgba(0, 0, 0, 0.25);
+}
+
+:root .navbar__sidebar {
+    background: #fff;
+    border-left-color: rgba(99, 102, 241, 0.15);
+    box-shadow: -10px 0 40px rgba(99, 102, 241, 0.08);
+}
+
+:root .navbar__sidebar-close:hover {
+    color: var(--gh-title-c);
+}
+
+:root .navbar__sidebar-logo {
+    border-bottom-color: rgba(99, 102, 241, 0.1);
+}
+
+:root .navbar__sidebar-item:hover,
+:root .navbar__sidebar-item.active {
+    color: var(--gh-title-c);
+    background: rgba(99, 102, 241, 0.05);
+}
+
+:root .navbar__sidebar-footer {
+    border-top-color: rgba(99, 102, 241, 0.1);
+}
+
+/* Dark mode keeps original navbar styles */
+.dark .navbar {
+    background: rgba(0, 0, 0, 0.7);
+    border-bottom-color: rgba(124, 58, 237, 0.2);
+}
+
+.dark .navbar__logo {
+    color: #fff;
+}
+
+.dark .navbar__overlay {
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.dark .navbar__sidebar {
+    background: #060606;
+    border-left-color: rgba(124, 58, 237, 0.3);
+    box-shadow: -10px 0 40px rgba(124, 58, 237, 0.15);
+}
+
+.dark .navbar__sidebar-close:hover {
+    color: #fff;
+}
+
+.dark .navbar__sidebar-logo {
+    border-bottom-color: rgba(124, 58, 237, 0.15);
+}
+
+.dark .navbar__sidebar-item:hover,
+.dark .navbar__sidebar-item.active {
+    color: #fff;
+    background: rgba(124, 58, 237, 0.07);
+}
+
+.dark .navbar__sidebar-footer {
+    border-top-color: rgba(124, 58, 237, 0.15);
 }

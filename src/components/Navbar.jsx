@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import ThemeToggle from '../themeToggle'
+import LoginModal from './LoginModal'
+import { supabase } from '../lib/supabase'
 import './Navbar.css'
+import './LoginModal.css'
 
 const NAV_ITEMS = [
     { icon: '🏠', label: 'O zespole', view: 'home' },
@@ -9,13 +12,25 @@ const NAV_ITEMS = [
     { icon: '📋', label: 'Plan realizacji', view: 'plan' },
 ]
 
-export default function Navbar({ onNavigate, currentView }) {
+export default function Navbar({ onNavigate, currentView, user, onAuthChange }) {
     const [open, setOpen] = useState(false)
+    const [showLogin, setShowLogin] = useState(false)
 
     const go = (view) => {
         setOpen(false)
         onNavigate(view)
     }
+
+    const handleLogout = async () => {
+        if (!supabase) return
+        await supabase.auth.signOut()
+        if (onAuthChange) onAuthChange(null)
+        setOpen(false)
+    }
+
+    const nickname = user?.user_metadata?.nickname || user?.user_metadata?.display_name || user?.email?.split('@')[0] || '?'
+    const initials = nickname.slice(0, 2).toUpperCase()
+    const avatarUrl = user?.user_metadata?.avatar_url
 
     return (
         <>
@@ -24,6 +39,19 @@ export default function Navbar({ onNavigate, currentView }) {
                     🎮 GG WP <span>for Good</span>
                 </button>
                 <div className="navbar__right">
+                    {user ? (
+                        <div className="navbar__user">
+                            <div className="navbar__user-avatar" onClick={() => go('account')} style={{ cursor: 'pointer' }}>
+                                {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : initials}
+                            </div>
+                            <span className="navbar__user-name" onClick={() => go('account')} style={{ cursor: 'pointer' }}>{nickname}</span>
+                            <button className="navbar__logout-btn" onClick={handleLogout}>Wyloguj</button>
+                        </div>
+                    ) : (
+                        <button className="navbar__login-btn" onClick={() => setShowLogin(true)}>
+                            Zaloguj się
+                        </button>
+                    )}
                     <ThemeToggle />
                     <button
                         className={`navbar__burger${open ? ' open' : ''}`}
@@ -37,12 +65,34 @@ export default function Navbar({ onNavigate, currentView }) {
                 </div>
             </nav>
 
+            {showLogin && (
+                <LoginModal
+                    onClose={() => setShowLogin(false)}
+                    onSuccess={(session) => {
+                        if (onAuthChange) onAuthChange(session.user)
+                    }}
+                />
+            )}
+
             {open && (
                 <>
                     <div className="navbar__overlay" onClick={() => setOpen(false)} />
                     <aside className="navbar__sidebar">
                         <button className="navbar__sidebar-close" onClick={() => setOpen(false)}>✕</button>
                         <div className="navbar__sidebar-logo">GG WP for Good</div>
+
+                        {user && (
+                            <div className="navbar__sidebar-user" onClick={() => go('account')} style={{ cursor: 'pointer' }}>
+                                <div className="navbar__sidebar-user-avatar">
+                                    {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : initials}
+                                </div>
+                                <div className="navbar__sidebar-user-info">
+                                    <span className="navbar__sidebar-user-name">{nickname}</span>
+                                    <span className="navbar__sidebar-user-email">{user.email}</span>
+                                </div>
+                            </div>
+                        )}
+
                         <nav className="navbar__sidebar-nav">
                             {NAV_ITEMS.map((item) => (
                                 <button
@@ -55,6 +105,30 @@ export default function Navbar({ onNavigate, currentView }) {
                                 </button>
                             ))}
                         </nav>
+
+                        {user ? (
+                            <>
+                                <button
+                                    className={`navbar__sidebar-item${currentView === 'account' ? ' active' : ''}`}
+                                    onClick={() => go('account')}
+                                >
+                                    <span className="navbar__sidebar-icon">👤</span>
+                                    Moje konto
+                                </button>
+                                <button className="navbar__sidebar-logout" onClick={handleLogout}>
+                                    <span>🚪</span> Wyloguj się
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                className="navbar__sidebar-item"
+                                onClick={() => { setOpen(false); setShowLogin(true) }}
+                            >
+                                <span className="navbar__sidebar-icon">🔐</span>
+                                Zaloguj się
+                            </button>
+                        )}
+
                         <div className="navbar__sidebar-footer">
                             Projektowanie Interfejsów WWW<br />
                             © {new Date().getFullYear()} GG WP for Good
