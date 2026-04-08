@@ -1,0 +1,149 @@
+.td-hero {
+  background: linear-gradient(135deg, rgba(82, 33, 230, 0.2), rgba(24, 24, 27, 0.8)), var(--gh-bg-card);
+  padding: 4rem 2rem;
+  border-radius: 12px;
+  text-align: center;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(82, 33, 230, 0.3);
+}
+
+.td-hero__badge {
+  display: inline-block;
+  padding: 0.3rem 0.8rem;
+  border-radius: 20px;
+  background: var(--gh-purple-lt);
+  color: white;
+  font-weight: 600;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.td-hero__title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: var(--gh-title-c);
+}
+
+.td-hero__subtitle {
+  font-size: 1.1rem;
+  color: var(--gh-text-c);
+  max-width: 600px;
+  margin: 0 auto 2rem;
+  line-height: 1.6;
+}
+
+.td-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 350px;
+  gap: 2rem;
+}
+
+@media (max-width: 900px) {
+  .td-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.td-section {
+  background: var(--gh-bg-card);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+  margin-bottom: 2rem;
+}
+
+.td-section__title {
+  font-size: 1.5rem;
+  color: var(--gh-title-c);
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  padding-bottom: 0.5rem;
+}
+
+.td-team-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.td-team-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(82, 33, 230, 0.4);
+}
+
+.td-team-info h4 {
+  color: var(--gh-title-c);
+  margin-bottom: 0.2rem;
+}
+
+.td-team-info p {
+  color: var(--gh-text-c);
+  font-size: 0.9rem;
+}
+
+.td-sidebar-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.td-sidebar-stat:last-child {
+  border-bottom: none;
+}
+
+.td-sidebar-stat span:first-child {
+  color: var(--gh-text-c);
+}
+
+.td-sidebar-stat span:last-child {
+  color: var(--gh-title-c);
+  font-weight: 600;
+}
+
+.td-leader-panel {
+  border: 2px solid var(--gh-purple-lt);
+}
+
+.td-request-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0,0,0,0.2);
+  padding: 0.8rem;
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+}
+
+.td-btn-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.gh-btn--sm {
+  padding: 0.4rem 0.8rem;
+  font-size: 0.85rem;
+}
+
+.gh-btn--danger {
+  background: #e11d48;
+}
+.gh-btn--danger:hover {
+  background: #be123c;
+}
+
+.gh-btn--outline {
+  background: transparent;
+  border: 1px solid var(--gh-cyan);
+  color: var(--gh-cyan);
+}
+.gh-btn--outline:hover {
+  background: var(--gh-cyan);
+  color: #000;
+}

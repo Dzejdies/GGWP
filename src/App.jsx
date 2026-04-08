@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import './App.css'
 import './gaming-home.css'
 import ThemeToggle from './themeToggle'
@@ -11,7 +11,7 @@ import Footer from './components/Footer'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AccountPage from './pages/AccountPage'
 import AdminPage from './pages/AdminPage'
-import { useEffect } from 'react'
+import TournamentDetailsPage from './pages/TournamentDetailsPage'
 import { supabase } from './lib/supabase'
 
 const TEAM = [
@@ -120,6 +120,21 @@ export default function App() {
   const [view, setView] = useState('landing')
   const [user, setUser] = useState(null)
   const [team, setTeam] = useState(TEAM)
+  const [selectedData, setSelectedData] = useState(null)
+  
+  // Ref to store scroll positions for different views/states
+  const scrollPositions = useRef({})
+
+  useEffect(() => {
+    const key = view + (selectedData ? '-' + selectedData : '');
+    const saved = scrollPositions.current[key] || 0;
+    
+    // We need a tiny delay to allow the new view to render its content length
+    const handle = requestAnimationFrame(() => {
+      window.scrollTo(0, saved);
+    });
+    return () => cancelAnimationFrame(handle);
+  }, [view, selectedData]);
 
   useEffect(() => {
     if (!supabase) return
@@ -155,9 +170,13 @@ export default function App() {
 
   const handleAuthChange = (newUser) => setUser(newUser)
 
-  const navigate = (target) => {
-    window.scrollTo({ top: 0, behavior: 'instant' })
+  const navigate = (target, data = null) => {
+    // Save current scroll position before leaving
+    const key = view + (selectedData ? '-' + selectedData : '');
+    scrollPositions.current[key] = window.scrollY;
+    
     setView(target)
+    setSelectedData(data)
   }
 
   if (view === 'landing') {
@@ -183,6 +202,9 @@ export default function App() {
   }
   if (view === 'admin') {
     return <AdminPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
+  }
+  if (view === 'tournament-details') {
+    return <TournamentDetailsPage tournamentId={selectedData} onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
   }
 
   // 'home' — O zespole

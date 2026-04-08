@@ -481,14 +481,33 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
       })
     supabase
       .from('tournaments')
-      .select('*')
-      .order('date', { ascending: true })
+      .select('*, teams(count)')
+      .order('start_date', { ascending: true })
       .then(({ data, error }) => {
-        if (!error && data && data.length > 0) {
-          if (import.meta.env.DEV) console.log('🗄️ Tournaments fetched from Supabase');
-          setTournaments(data)
+        if (!error && data) {
+          const mappedData = data.map(t => ({
+            id: t.id,
+            title: t.name,
+            game: t.game,
+            description: t.description,
+            date: t.start_date,
+            max_participants: t.max_teams,
+            // Mapowanie statusów z DB na format wyświetlania frontu
+            status: t.status === 'open' ? 'upcoming' : (t.status === 'ongoing' ? 'live' : (t.status === 'finished' ? 'completed' : t.status)),
+            prize_pool: t.prize_pool,
+            participants_count: t.teams?.[0]?.count || 0
+          }))
+          
+          if (mappedData.length > 0) {
+            if (import.meta.env.DEV) console.log('🗄️ Tournaments fetched from Supabase');
+            setTournaments(mappedData)
+          } else {
+            if (import.meta.env.DEV) console.log('⚠️ No tournaments in DB. Using TOURNAMENTS_FALLBACK.');
+            setTournaments(TOURNAMENTS_FALLBACK)
+          }
         } else {
-          if (import.meta.env.DEV) console.log('⚠️ Failed to fetch tournaments from Supabase or table empty. Using TOURNAMENTS_FALLBACK.');
+          if (import.meta.env.DEV) console.log('⚠️ Error fetching tournaments. Using TOURNAMENTS_FALLBACK.', error);
+          setTournaments(TOURNAMENTS_FALLBACK)
         }
       })
   }, [])
@@ -661,18 +680,9 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
                     </span>
                   </div>
                 </div>
-                {t.status === 'upcoming' && (
-                  <button className="tournament-card__btn" onClick={() => { 
-                    setSelectedTournament(t); 
-                    if (user) {
-                      setShowEnrollModal(true);
-                    } else {
-                      setShowModal(true); 
-                    }
-                  }}>
-                    🎮 Zapisz się
+                  <button className="tournament-card__btn" onClick={() => onNavigate('tournament-details', t.id)}>
+                    🔍 Zobacz szczegóły
                   </button>
-                )}
               </div>
             ))}
             </div>

@@ -1,0 +1,242 @@
+.wizard-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw; height: 100vh;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 9999;
+  backdrop-filter: blur(5px);
+  padding: 1rem;
+}
+
+.wizard-modal {
+  background: var(--gh-bg);
+  border: 1px solid var(--gh-border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  animation: slideUpFade 0.3s ease-out forwards;
+}
+
+@keyframes slideUpFade {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.wizard-close {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  color: var(--gh-text-c);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.wizard-close:hover {
+  color: var(--gh-danger);
+}
+
+.wizard-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--gh-border);
+  text-align: center;
+}
+
+.wizard-header h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--gh-cyan);
+}
+
+.wizard-progress {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 400px;
+  margin: 0 auto;
+}
+
+.step-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--gh-bg-secondary);
+  border: 2px solid var(--gh-border);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: bold;
+  color: var(--gh-text-c);
+  transition: all 0.3s ease;
+}
+
+.step-dot.active {
+  background: var(--gh-cyan);
+  border-color: var(--gh-cyan);
+  color: #0b0f19;
+  box-shadow: 0 0 10px rgba(88, 166, 255, 0.4);
+}
+
+.step-line {
+  flex: 1;
+  height: 4px;
+  background: var(--gh-bg-secondary);
+  margin: 0 10px;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+}
+
+.step-line.active {
+  background: var(--gh-cyan);
+}
+
+.wizard-body {
+  padding: 2rem;
+  min-height: 250px;
+}
+
+.wizard-error {
+  background: rgba(248, 81, 73, 0.1);
+  color: var(--gh-danger);
+  border: 1px solid var(--gh-danger);
+  padding: 0.8rem;
+  text-align: center;
+  margin: 1rem 2rem 0;
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+.wizard-step h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.wizard-subtitle {
+  color: var(--gh-text-c);
+  margin-bottom: 2rem;
+  font-size: 0.95rem;
+}
+
+.wizard-field {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1.5rem;
+}
+
+.wizard-field label {
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+  color: var(--gh-text);
+  font-size: 0.95rem;
+}
+
+.wizard-field input[type="text"],
+.wizard-field select {
+  background: var(--gh-bg-secondary);
+  border: 1px solid var(--gh-border);
+  color: var(--gh-text);
+  padding: 0.8rem;
+  border-radius: 6px;
+  outline: none;
+  font-family: inherit;
+}
+
+.wizard-field input[type="text"]:focus,
+.wizard-field select:focus {
+  border-color: var(--gh-cyan);
+  box-shadow: 0 0 0 2px rgba(88, 166, 255, 0.2);
+}
+
+.avatar-upload-zone {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.avatar-placeholder, .avatar-preview {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--gh-border);
+  display: flex;
+  font-size: 2rem;
+  justify-content: center;
+  align-items: center;
+  background: var(--gh-bg-secondary);
+}
+
+.wizard-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  font-size: 0.95rem;
+  color: var(--gh-text);
+  cursor: pointer;
+}
+
+.highlight-checkbox {
+  background: var(--gh-bg-secondary);
+  padding: 1rem;
+  border-radius: 6px;
+  border: 1px solid var(--gh-cyan);
+}
+
+.rules-box {
+  background: var(--gh-bg-secondary);
+  border: 1px solid var(--gh-border);
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+}
+
+.rules-box h4 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.rules-box p {
+  margin: 0.3rem 0;
+  color: var(--gh-text-c);
+  font-size: 0.9rem;
+}
+
+.summary-box {
+  background: var(--gh-bg-secondary);
+  border: 1px solid var(--gh-border);
+  border-radius: 6px;
+  padding: 1.5rem;
+}
+
+.summary-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--gh-border);
+  padding-bottom: 0.5rem;
+}
+
+.summary-row:last-child {
+  margin-bottom: 0;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.summary-row span {
+  color: var(--gh-text-c);
+}
+
+.wizard-footer {
+  padding: 1.5rem;
+  border-top: 1px solid var(--gh-border);
+  display: flex;
+  justify-content: space-between;
+}
