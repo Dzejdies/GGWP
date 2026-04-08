@@ -39,21 +39,12 @@ export default function Navbar({ onNavigate, currentView, user, onAuthChange, in
     return (
         <>
             <nav className="navbar">
-                {/* <button className="navbar__logo" onClick={() => go(user ? 'dashboard' : 'landing')}>
-                    🎮 GG WP <span>for Good</span>
-                </button> */}
-                {/* again, be consistent lad */}
-                <button className="navbar__logo" onClick={() => go('landing')}>
+                <button className="navbar__logo" onClick={() => go(user ? 'dashboard' : 'landing')}>
                     🎮 GG WP <span>for Good</span>
                 </button>
                 <div className="navbar__right">
                     {user ? (
                         <div className="navbar__user">
-                            <div>
-                                <button className='gh-btn gh-btn--dashboardBtn gh-btn--outline' onClick={() => go('dashboard')}>
-                                    Dashboard
-                                </button>
-                            </div>
                             <NotificationCenter user={user} />
                             <div className="navbar__user-avatar" onClick={() => go('account')} style={{ cursor: 'pointer' }}>
                                 {avatarUrl ? <img src={avatarUrl} alt="Avatar" /> : initials}

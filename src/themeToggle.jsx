@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import './components/button.css';
 
 export default function ThemeToggle() {
   const [isDark, setIsDark] = useState(() => {
@@ -18,22 +19,10 @@ export default function ThemeToggle() {
   }, [isDark]);
 
   return (
-    <button
+    <button className='gh-btn gh-btn--navbar'
       onClick={() => setIsDark(!isDark)}
-      style={{
-        backgroundColor: 'var(--gh-purple)',
-        color: 'var(--gh-title-c)',
-        padding: '10px 20px',
-        borderRadius: '8px',
-        fontWeight: 'bold',
-        cursor: 'pointer',
-        border: '1px solid var(--gh-border)',
-        display: 'block',
-        minWidth: '120px',
-        transition: 'all 0.2s ease'
-      }}
     >
-      {isDark ? '🌙 DARK' : '👽 LIGHT'}
+      {isDark ? '☀️ LIGHT' : '🌙 DARK'}
     </button>
   );
 }

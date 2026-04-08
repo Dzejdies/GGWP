@@ -19,9 +19,15 @@
     margin-bottom: 0.5rem;
 }
 
-.gh-btn--dashboardBtn {
+.gh-btn--navbar {
     margin: 0;
+    text-align: center;
     margin-right: 1rem;
+    margin-left: 1rem;
+    min-width: 137px;
+    background-color: var(--gh-theme-btn);
+    color: var(--gh-theme-txt);
+    transition: background-color 0.5s, color 0.5s;
 }
 
 .gh-btn::before {
