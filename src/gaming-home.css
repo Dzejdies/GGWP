@@ -8,7 +8,7 @@
 :root {
   /* Light mode tokens (Default) */
   --gh-bg: #ffffff;
-  --gh-surface: #f8fafc;
+  --gh-surface: #eef4fd;
   --gh-surface-2: #f1f5f9;
   --gh-border: rgba(100, 116, 139, 0.2);
   --gh-border-h: rgba(99, 102, 241, 0.5);
