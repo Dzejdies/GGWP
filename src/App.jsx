@@ -14,131 +14,35 @@ import AdminPage from './pages/AdminPage'
 import TournamentDetailsPage from './pages/TournamentDetailsPage'
 import DashboardPage from './pages/DashboardPage'
 import TournamentsListPage from './pages/TournamentsListPage'
+import AboutPage from './pages/AboutPage'
 import { ToastProvider } from './components/Toast'
 import { supabase } from './lib/supabase'
-
-const TEAM = [
-  {
-    name: 'Brajan Szczepańczyk',
-    role: 'Backend',
-    description: 'Umiem w Javę (2/10) /s',
-  },
-  {
-    name: 'Mateusz Kołodziejczyk',
-    role: 'Frontend',
-    description: 'Umiem w jezyk programowania HTML (3/10) /s',
-  },
-]
-
-const CANVAS_SECTIONS = [
-  {
-    id: 'purpose',
-    label: 'Cel zespołu',
-    content: 'Zbieranie środków na cele charytatywne akcją GG WP',
-    wide: false,
-  },
-  {
-    id: 'values',
-    label: 'Wartości',
-    content: ['Kreatywność', 'Szczerość', 'Jakość ponad ilość', 'Wzajemny szacunek', 'Nienawiść do Analizy'],
-    wide: false,
-  },
-  {
-    id: 'strengths',
-    label: 'Mocne strony',
-    content: ['Frontend development', 'Projektowanie UI/UX', 'Szybkie prototypowanie', 'Praca zespołowa'],
-    wide: false,
-  },
-  {
-    id: 'roles',
-    label: 'Role',
-    content: ['Brajan — Backend lub Frontend', 'Mateusz — Frontend lub backend'],
-    wide: false,
-  },
-  {
-    id: 'rules',
-    label: 'Zasady',
-    content: ['Branch Main jest święty, nie pushuj', 'Code review przed mergem', 'Ja merguje (no chyba ze nie)'],
-    wide: false,
-  },
-  {
-    id: 'goals',
-    label: 'Cele wspólne',
-    content: 'Zaliczyć projekt.',
-    wide: true,
-  },
-]
-
-function CanvasCell({ label, content, wide }) {
-  return (
-    <div className={`gh-canvas-cell${wide ? ' gh-canvas-cell--wide' : ''}`}>
-      <div className="gh-canvas-cell__header">
-        <span className="gh-canvas-cell__label">{label}</span>
-      </div>
-      {Array.isArray(content) ? (
-        <ul className="gh-canvas-cell__list">
-          {content.map((item) => (
-            <li key={item}>{item}</li>
-          ))}
-        </ul>
-      ) : (
-        <p className="gh-canvas-cell__text">{content}</p>
-      )}
-    </div>
-  )
-}
-
-function GamingTeamMember({ name, role, description, index = 0 }) {
-  const gradients = [
-    'var(--gh-avatar-g1)',
-    'var(--gh-avatar-g2)',
-  ]
-  const initials = name
-    .split(' ')
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2)
-  const bg = gradients[index % gradients.length]
-
-  return (
-    <div className="gh-card">
-      <div
-        className="gh-avatar"
-        data-initials={initials}
-        style={{ background: bg }}
-      >
-        {initials}
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', alignItems: 'center' }}>
-        <span className="gh-member-name">{name}</span>
-        <span className="gh-member-role">{role}</span>
-        {description && <p className="gh-member-desc">{description}</p>}
-      </div>
-    </div>
-  )
-}
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 
 export default function App() {
-  const [view, setView] = useState('landing')
   const [user, setUser] = useState(null)
-  const [team, setTeam] = useState(TEAM)
-  const [selectedData, setSelectedData] = useState(null)
+  
+  const routerNavigate = useNavigate()
+  const location = useLocation()
+  
+  // Dawny selectedData staje się teraz stanem routingu (location.state)
+  const selectedData = location.state || null;
 
   // Ref to store scroll positions for different views/states
   const scrollPositions = useRef({})
 
+  // Odtwarzanie pozycji scrolla przy zmianie URL
   useEffect(() => {
-    const key = view + (selectedData ? '-' + selectedData : '');
+    const key = location.pathname + (selectedData ? '-' + selectedData : '');
     const saved = scrollPositions.current[key] || 0;
 
-    // We need a tiny delay to allow the new view to render its content length
     const handle = requestAnimationFrame(() => {
       window.scrollTo(0, saved);
     });
     return () => cancelAnimationFrame(handle);
-  }, [view, selectedData]);
+  }, [location.pathname, selectedData]);
 
+  // Autoryzacja i trzymanie sesji
   useEffect(() => {
     if (!supabase) return
 
@@ -146,8 +50,6 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
         setUser(session.user)
-        //setView(prev => prev === 'landing' ? 'dashboard' : prev)
-        setView('landing')
       }
     })
 
@@ -155,102 +57,65 @@ export default function App() {
       if (event === 'SIGNED_IN') {
         setUser(session?.user ?? null)
         if (window.location.hash.includes('access_token')) {
-          setView('confirmed')
-          window.history.replaceState(null, '', window.location.pathname)
-        } else {
-          setView('dashboard')
+            routerNavigate('/confirmed')
+            window.history.replaceState(null, '', window.location.pathname)
+        } else if (location.pathname === '/' || location.pathname === '/landing') {
+            routerNavigate('/dashboard')
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
-        setView('landing')
+        //routerNavigate('/')
       }
     })
 
-    // Fetch team members from DB
-    supabase
-      .from('website_team')
-      .select('name, role, description, sort_order')
-      .order('sort_order')
-      .then(({ data, error }) => {
-        if (!error && data && data.length > 0) setTeam(data)
-      })
-
     return () => subscription.unsubscribe()
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAuthChange = (newUser) => setUser(newUser)
 
+  // Pomost/Wrapper nawigacji - tłumaczy stare stringi stanu na ścieżki reat-router-dom!
   const navigate = (target, data = null) => {
     // Save current scroll position before leaving
-    const key = view + (selectedData ? '-' + selectedData : '');
+    const key = location.pathname + (selectedData ? '-' + selectedData : '');
     scrollPositions.current[key] = window.scrollY;
 
-    setView(target)
-    setSelectedData(data)
-  }
+    let path = '/'
+    if (target === 'dashboard') path = '/dashboard'
+    else if (target === 'landing') path = '/'
+    else if (target === 'analysis') path = '/analysis'
+    else if (target === 'project') path = '/project'
+    else if (target === 'plan') path = '/plan'
+    else if (target === 'account') path = '/account'
+    else if (target === 'admin') path = '/admin'
+    else if (target === 'tournaments-list') path = '/tournaments-list'
+    else if (target === 'tournament-details') path = `/tournaments/${data}`
+    else if (target === 'confirmed') path = '/confirmed'
+    else if (target === 'home') path = '/about' // nowy routing do AboutPage
 
-  const renderPage = () => {
-    if (view === 'dashboard' && user) return <DashboardPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'landing') return <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'analysis') return <AnalysisPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'project') return <ProjectPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'plan') return <PlanPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'confirmed') return <ConfirmationPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'account') {
-      return <AccountPage
-        onNavigate={navigate}
-        user={user}
-        onAuthChange={handleAuthChange}
-        initialTabData={selectedData}
-      />
-    }
-    if (view === 'admin') return <AdminPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    if (view === 'tournament-details') {
-      return <TournamentDetailsPage tournamentId={selectedData} onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-    }
-    if (view === 'tournaments-list') return <TournamentsListPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
-
-    // Default: 'home' — O zespole
-    return (
-      <div className="gh-page">
-        <Navbar
-          onNavigate={navigate}
-          currentView={view}
-          user={user}
-          onAuthChange={handleAuthChange}
-          initialTabData={selectedData}
-        />
-        <main className="gh-main" style={{ marginTop: '73px' }}>
-          <h1 className="gh-title" data-text="O nas" style={{ marginBottom: '2rem' }}>O nas</h1>
-          <section>
-            <h2 className="gh-section-title">Nasz zespół</h2>
-            <div className="gh-team-grid">
-              {team.map((member, i) => (
-                <GamingTeamMember key={member.name} {...member} index={i} />
-              ))}
-            </div>
-          </section>
-
-          <section className="gh-canvas">
-            <div className="gh-canvas-header">
-              <h2 className="gh-canvas-title">Team Canvas</h2>
-              <p className="gh-canvas-subtitle">Jak pracujemy i co nas łączy</p>
-            </div>
-            <div className="gh-canvas-grid">
-              {CANVAS_SECTIONS.map((s) => (
-                <CanvasCell key={s.id} {...s} />
-              ))}
-            </div>
-          </section>
-        </main>
-        <Footer />
-      </div>
-    )
+    routerNavigate(path, { state: data })
   }
 
   return (
     <ToastProvider>
-      {renderPage()}
+      <Routes>
+        <Route path="/" element={<LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        
+        {/* Zabezpieczenie ścieżek przez user ? ... : ... */}
+        <Route path="/dashboard" element={user ? <DashboardPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} /> : <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange}/>} />
+        
+        <Route path="/analysis" element={<AnalysisPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        <Route path="/project" element={<ProjectPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        <Route path="/plan" element={<PlanPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        <Route path="/confirmed" element={<ConfirmationPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        <Route path="/account" element={<AccountPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} initialTabData={selectedData} />} />
+        <Route path="/admin" element={user ? <AdminPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} /> : <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange}/>} />
+        
+        {/* Parametry w URL! */}
+        <Route path="/tournaments/:id" element={<TournamentDetailsPage tournamentId={selectedData} onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        <Route path="/tournaments-list" element={<TournamentsListPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+        
+        <Route path="/about" element={<AboutPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} initialTabData={selectedData} />} />
+      </Routes>
     </ToastProvider>
   )
 }

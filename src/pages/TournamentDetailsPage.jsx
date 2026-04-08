@@ -4,9 +4,13 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { supabase } from '../lib/supabase'
 import WizardRegistrationModal from '../components/WizardRegistrationModal'
+import { useParams } from 'react-router-dom'
 import '../components/button.css'
 
-export default function TournamentDetailsPage({ tournamentId, onNavigate, user, onAuthChange }) {
+export default function TournamentDetailsPage({ tournamentId: propsTournamentId, onNavigate, user, onAuthChange }) {
+  const { id } = useParams()
+  const tournamentId = id || propsTournamentId;
+  
   // Stan turnieju
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
