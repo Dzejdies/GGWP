@@ -31,6 +31,7 @@ export default function Navbar({ onNavigate, currentView, user, onAuthChange }) 
     const nickname = user?.user_metadata?.nickname || user?.user_metadata?.display_name || user?.email?.split('@')[0] || '?'
     const initials = nickname.slice(0, 2).toUpperCase()
     const avatarUrl = user?.user_metadata?.avatar_url
+    const isAdmin = user?.app_metadata?.role === 'admin'
 
     return (
         <>
@@ -115,6 +116,15 @@ export default function Navbar({ onNavigate, currentView, user, onAuthChange }) 
                                     <span className="navbar__sidebar-icon">👤</span>
                                     Moje konto
                                 </button>
+                                {isAdmin && (
+                                    <button
+                                        className={`navbar__sidebar-item${currentView === 'admin' ? ' active' : ''}`}
+                                        onClick={() => go('admin')}
+                                    >
+                                        <span className="navbar__sidebar-icon">🛡️</span>
+                                        Admin Panel
+                                    </button>
+                                )}
                                 <button className="navbar__sidebar-logout" onClick={handleLogout}>
                                     <span>🚪</span> Wyloguj się
                                 </button>

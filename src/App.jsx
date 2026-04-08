@@ -10,6 +10,7 @@ import LandingPage from './pages/LandingPage'
 import Footer from './components/Footer'
 import ConfirmationPage from './pages/ConfirmationPage'
 import AccountPage from './pages/AccountPage'
+import AdminPage from './pages/AdminPage'
 import { useEffect } from 'react'
 import { supabase } from './lib/supabase'
 
@@ -168,6 +169,9 @@ export default function App() {
   }
   if (view === 'account') {
     return <AccountPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
+  }
+  if (view === 'admin') {
+    return <AdminPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />
   }
 
   // 'home' — O zespole
