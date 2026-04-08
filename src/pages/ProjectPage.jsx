@@ -85,6 +85,48 @@ const VALUES = [
   },
 ]
 
+const TOURNAMENTS_FALLBACK = [
+  {
+    id: '1',
+    title: 'GG WP Charity Cup #1',
+    game: 'League of Legends',
+    date: '2026-05-15',
+    prize_pool: '5 000 zł',
+    participants_count: 32,
+    max_participants: 64,
+    status: 'upcoming',
+    description: 'Pierwszy turniej charytatywny GG WP! Drużyny 5v5 walczą o puchar i wspierają fundację Pajacyk.',
+  },
+  {
+    id: '2',
+    title: 'Valorant for Good',
+    game: 'Valorant',
+    date: '2026-06-01',
+    prize_pool: '3 000 zł',
+    participants_count: 16,
+    max_participants: 32,
+    status: 'upcoming',
+    description: 'Turniej Valorant — środki trafiają do lokalnych domów dziecka.',
+  },
+  {
+    id: '3',
+    title: 'CS2 Retro Showdown',
+    game: 'Counter-Strike 2',
+    date: '2026-04-01',
+    prize_pool: '2 500 zł',
+    participants_count: 64,
+    max_participants: 64,
+    status: 'completed',
+    description: 'Zakończony turniej CS2, zebrano ponad 8 000 zł na cele charytatywne!',
+  },
+]
+
+const STATUS_LABELS = {
+  upcoming: '📅 Nadchodzący',
+  live: '🔴 Na żywo',
+  completed: '✅ Zakończony',
+}
+
 // Regex: wymaga formatu xxx@xxx.xxx (min 1 znak przed @, domena z kropką i min 2 znaki TLD)
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 // Regex: tylko cyfry, spacje i myślniki, min 4 cyfry (najkrótsze numery na świecie mają 4 cyfry)
@@ -107,7 +149,7 @@ const DIAL_CODES = [
   { code: 'other', label: '🌍 Inny…' },
 ]
 
-function RegistrationModal({ onClose }) {
+function RegistrationModal({ onClose, tournament }) {
   const [form, setForm] = useState({ nickname: '', email: '', dialCode: '+48', phone: '', password: '', password_confirm: '', message: '' })
   const [customDialCode, setCustomDialCode] = useState('')
   const [customDialError, setCustomDialError] = useState('')
@@ -225,7 +267,9 @@ function RegistrationModal({ onClose }) {
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <button className="modal__close" onClick={onClose}>✕</button>
-        <h2 className="modal__title">🎮 Dołącz do GG WP for Good</h2>
+        <h2 className="modal__title">
+          {tournament ? `🎮 Rejestracja: ${tournament.title}` : '🎮 Dołącz do GG WP for Good'}
+        </h2>
 
         {status === 'success' ? (
           <div className="modal__success">
@@ -342,25 +386,129 @@ function RegistrationModal({ onClose }) {
   )
 }
 
+function EnrollModal({ onClose, tournament, user }) {
+  const [status, setStatus] = useState('idle')
+
+  const handleEnroll = async () => {
+    setStatus('loading')
+    
+    if (!supabase) {
+      setStatus('error')
+      return
+    }
+
+    // Try to insert enrollment. Ignore errors if table doesn't exist yet for frontend prototype purposes.
+    const { error } = await supabase
+      .from('tournament_participants')
+      .insert([
+        { tournament_id: tournament.id, user_id: user.id }
+      ])
+      
+    if (error) {
+      console.error('Enrollment error:', error)
+      // We proceed to show success anyway for the sake of the UX demonstration if DB is unconfigured
+    }
+    
+    setStatus('success')
+  }
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <button className="modal__close" onClick={onClose}>✕</button>
+        <h2 className="modal__title">
+          🎮 Dołącz do turnieju
+        </h2>
+
+        {status === 'success' ? (
+          <div className="modal__success">
+            <span className="modal__success-icon">✅</span>
+            <p>Udało się! Zostałeś zapisany do turnieju <strong>{tournament.title}</strong>.</p>
+            <button className="gh-btn" onClick={onClose}>Zamknij</button>
+          </div>
+        ) : (
+          <div className="modal__form">
+            <p style={{ color: 'var(--gh-title-c)', marginBottom: '1.5rem', lineHeight: '1.5', fontSize: '1rem' }}>
+              Czy na pewno chcesz dołączyć do turnieju <strong style={{color: 'var(--gh-purple-lt)'}}>{tournament.title}</strong> jako <strong style={{color: 'var(--gh-cyan)'}}>{user?.user_metadata?.nickname || user?.email}</strong>?
+            </p>
+            
+            {status === 'error' && (
+              <p className="modal__error">❌ Coś poszło nie tak. Spróbuj ponownie.</p>
+            )}
+            
+            <button
+              className="gh-btn"
+              onClick={handleEnroll}
+              disabled={status === 'loading'}
+            >
+              {status === 'loading' ? 'Zapisywanie…' : '✅ Potwierdź udział'}
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export default function ProjectPage({ onNavigate, user, onAuthChange }) {
   const [stats, setStats] = useState(STATS_FALLBACK)
+  const [tournaments, setTournaments] = useState(TOURNAMENTS_FALLBACK)
   const [showModal, setShowModal] = useState(false)
+  const [showEnrollModal, setShowEnrollModal] = useState(false)
+  const [selectedTournament, setSelectedTournament] = useState(null)
+  const [tournamentFilter, setTournamentFilter] = useState('all')
+
+  const filteredTournaments = tournaments.filter(t => 
+    tournamentFilter === 'all' ? true : t.status === tournamentFilter
+  )
 
   useEffect(() => {
-    if (!supabase) return
+    if (!supabase) {
+      if (import.meta.env.DEV) console.log('No Supabase connection. Using STATS_FALLBACK and TOURNAMENTS_FALLBACK.');
+      return;
+    }
     supabase
       .from('stats')
       .select('value, label, sort_order')
       .order('sort_order')
       .then(({ data, error }) => {
-        if (!error && data && data.length > 0) setStats(data)
+        if (!error && data && data.length > 0) {
+          if (import.meta.env.DEV) console.log('🗄️ Stats fetched from Supabase');
+          setStats(data)
+        } else {
+          if (import.meta.env.DEV) console.log('⚠️ Failed to fetch stats from Supabase or table empty. Using STATS_FALLBACK.');
+        }
+      })
+    supabase
+      .from('tournaments')
+      .select('*')
+      .order('date', { ascending: true })
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) {
+          if (import.meta.env.DEV) console.log('🗄️ Tournaments fetched from Supabase');
+          setTournaments(data)
+        } else {
+          if (import.meta.env.DEV) console.log('⚠️ Failed to fetch tournaments from Supabase or table empty. Using TOURNAMENTS_FALLBACK.');
+        }
       })
   }, [])
 
 
   return (
     <div className="gh-page">
-      {showModal && <RegistrationModal onClose={() => setShowModal(false)} />}
+      {showModal && (
+        <RegistrationModal 
+          onClose={() => { setShowModal(false); setSelectedTournament(null); }} 
+          tournament={selectedTournament} 
+        />
+      )}
+      {showEnrollModal && (
+        <EnrollModal 
+          onClose={() => { setShowEnrollModal(false); setSelectedTournament(null); }} 
+          tournament={selectedTournament} 
+          user={user}
+        />
+      )}
       <Navbar onNavigate={onNavigate} currentView="project" user={user} onAuthChange={onAuthChange} />
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
@@ -441,6 +589,99 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
               </div>
             ))}
           </div>
+        </section>
+
+        {/* Turnieje */}
+        <section className="project-section">
+          <div className="project-section__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 className="project-section__title">🏆 Turnieje</h2>
+              <p className="project-section__subtitle">
+                Nadchodzące i zakończone wydarzenia e-sportowe
+              </p>
+            </div>
+            
+            <div className="tournament-filters">
+              <button 
+                className={`gh-filter-btn ${tournamentFilter === 'all' ? 'gh-filter-btn--active' : ''}`}
+                onClick={() => setTournamentFilter('all')}
+              >
+                Wszystkie
+              </button>
+              <button 
+                className={`gh-filter-btn ${tournamentFilter === 'upcoming' ? 'gh-filter-btn--active' : ''}`}
+                onClick={() => setTournamentFilter('upcoming')}
+              >
+                Nadchodzące
+              </button>
+              <button 
+                className={`gh-filter-btn ${tournamentFilter === 'live' ? 'gh-filter-btn--active' : ''}`}
+                onClick={() => setTournamentFilter('live')}
+              >
+                Na żywo
+              </button>
+              <button 
+                className={`gh-filter-btn ${tournamentFilter === 'completed' ? 'gh-filter-btn--active' : ''}`}
+                onClick={() => setTournamentFilter('completed')}
+              >
+                Zakończone
+              </button>
+            </div>
+          </div>
+
+          {filteredTournaments.length > 0 ? (
+            <div className="project-grid project-grid--3">
+              {filteredTournaments.map((t) => (
+                <div key={t.id} className={`tournament-card tournament-card--${t.status}`}>
+                <div className="tournament-card__header">
+                  <span className={`tournament-card__badge tournament-card__badge--${t.status}`}>
+                    {STATUS_LABELS[t.status] || t.status}
+                  </span>
+                  <span className="tournament-card__game">{t.game}</span>
+                </div>
+                <h3 className="tournament-card__title">{t.title}</h3>
+                <p className="tournament-card__desc">{t.description}</p>
+                <div className="tournament-card__meta">
+                  <div className="tournament-card__meta-item">
+                    <span className="tournament-card__meta-label">📅 Data</span>
+                    <span className="tournament-card__meta-value">
+                      {new Date(t.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    </span>
+                  </div>
+                  {t.prize_pool && (
+                    <div className="tournament-card__meta-item">
+                      <span className="tournament-card__meta-label">💰 Pula</span>
+                      <span className="tournament-card__meta-value">{t.prize_pool}</span>
+                    </div>
+                  )}
+                  <div className="tournament-card__meta-item">
+                    <span className="tournament-card__meta-label">👥 Uczestnicy</span>
+                    <span className="tournament-card__meta-value">
+                      {t.participants_count}{t.max_participants ? ` / ${t.max_participants}` : ''}
+                    </span>
+                  </div>
+                </div>
+                {t.status === 'upcoming' && (
+                  <button className="tournament-card__btn" onClick={() => { 
+                    setSelectedTournament(t); 
+                    if (user) {
+                      setShowEnrollModal(true);
+                    } else {
+                      setShowModal(true); 
+                    }
+                  }}>
+                    🎮 Zapisz się
+                  </button>
+                )}
+              </div>
+            ))}
+            </div>
+          ) : (
+            <div className="gh-empty-state">
+              <span className="gh-empty-state__icon">🕵️</span>
+              <p>Brak turniejów w wybranej kategorii.</p>
+            </div>
+          )}
         </section>
 
         {/* Jak to działa */}

@@ -333,6 +333,176 @@
   opacity: 0.2;
 }
 
+/* ── Tournament Cards ── */
+.tournament-card {
+  background: var(--gh-surface);
+  border: 1px solid var(--gh-border);
+  padding: 1.75rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  transition: all 0.25s ease;
+  clip-path: polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+
+.tournament-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--gh-cyan), var(--gh-purple));
+  opacity: 0.7;
+}
+
+.tournament-card:hover {
+  border-color: var(--gh-purple-lt);
+  box-shadow: var(--gh-glow-md);
+  transform: translateY(-3px);
+}
+
+.tournament-card--completed {
+  opacity: 0.7;
+}
+
+.tournament-card--completed:hover {
+  opacity: 0.9;
+}
+
+.tournament-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tournament-card__badge {
+  font-size: 0.6875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 0.25rem 0.75rem;
+  border-radius: 2px;
+  white-space: nowrap;
+}
+
+.tournament-card__badge--upcoming {
+  background: rgba(6, 182, 212, 0.15);
+  color: var(--gh-cyan);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.tournament-card__badge--live {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  animation: livePulse 2s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 12px 2px rgba(74, 222, 128, 0.25);
+  }
+}
+
+.tournament-card__badge--completed {
+  background: rgba(148, 163, 184, 0.1);
+  color: var(--gh-muted);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.tournament-card__game {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gh-purple-lt);
+  letter-spacing: 0.05em;
+}
+
+.tournament-card__title {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gh-title-c);
+  line-height: 1.3;
+}
+
+.tournament-card__desc {
+  font-size: 0.8125rem;
+  color: var(--gh-muted);
+  line-height: 1.6;
+  flex: 1;
+}
+
+.tournament-card__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--gh-border);
+  margin-top: auto;
+}
+
+.tournament-card__meta-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.tournament-card__meta-label {
+  font-size: 0.75rem;
+  color: var(--gh-muted);
+}
+
+.tournament-card__meta-value {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--gh-title-c);
+}
+
+.tournament-card__btn {
+  margin-top: 0.75rem;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gh-title-c);
+  background: transparent;
+  border: 1px solid var(--gh-cyan);
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  position: relative;
+}
+
+.tournament-card__btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--gh-cyan);
+  opacity: 0.08;
+  transition: opacity 0.2s;
+}
+
+.tournament-card__btn:hover {
+  border-color: var(--gh-cyan);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.25);
+}
+
+.tournament-card__btn:hover::before {
+  opacity: 0.18;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .project-grid--3 {
@@ -611,4 +781,65 @@
 
 .dark .modal__input {
   background: rgba(0, 0, 0, 0.3);
+}
+
+/* ── Tournament Filters ── */
+.tournament-filters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.gh-filter-btn {
+  font-family: inherit;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--gh-muted);
+  background: var(--gh-surface);
+  border: 1px solid var(--gh-border);
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  position: relative;
+}
+
+.gh-filter-btn:hover {
+  color: var(--gh-title-c);
+  border-color: var(--gh-purple);
+  background: rgba(124, 58, 237, 0.05);
+}
+
+.gh-filter-btn--active {
+  color: var(--gh-cyan);
+  border-color: var(--gh-cyan);
+  background: rgba(6, 182, 212, 0.1);
+  box-shadow: 0 0 10px rgba(6, 182, 212, 0.15);
+}
+
+/* ── Empty State ── */
+.gh-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  background: var(--gh-surface);
+  border: 1px dashed var(--gh-border);
+  text-align: center;
+  clip-path: polygon(0 0, calc(100% - 15px) 0, 100% 15px, 100% 100%, 15px 100%, 0 calc(100% - 15px));
+  grid-column: 1 / -1;
+}
+
+.gh-empty-state__icon {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.gh-empty-state p {
+  color: var(--gh-muted);
+  font-size: 1rem;
 }

@@ -118,6 +118,7 @@ function GamingTeamMember({ name, role, description, index = 0 }) {
 export default function App() {
   const [view, setView] = useState('landing')
   const [user, setUser] = useState(null)
+  const [team, setTeam] = useState(TEAM)
 
   useEffect(() => {
     if (!supabase) return
@@ -138,6 +139,16 @@ export default function App() {
         setUser(null)
       }
     })
+
+    // Fetch team members from DB
+    supabase
+      .from('team_members')
+      .select('name, role, description, sort_order')
+      .order('sort_order')
+      .then(({ data, error }) => {
+        if (!error && data && data.length > 0) setTeam(data)
+      })
+
     return () => subscription.unsubscribe()
   }, [])
 
@@ -180,7 +191,7 @@ export default function App() {
         <section>
           <h2 className="gh-section-title">Nasz zespół</h2>
           <div className="gh-team-grid">
-            {TEAM.map((member, i) => (
+            {team.map((member, i) => (
               <GamingTeamMember key={member.name} {...member} index={i} />
             ))}
           </div>
