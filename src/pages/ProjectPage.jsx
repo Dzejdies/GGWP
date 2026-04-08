@@ -450,47 +450,113 @@ function EnrollModal({ onClose, tournament, user }) {
   )
 }
 
+function StatSkeleton() {
+  return (
+    <div className="stat-skeleton skeleton">
+      <div className="bar-val skeleton" />
+      <div className="bar-lbl skeleton" />
+    </div>
+  )
+}
+
+function TournamentSkeleton() {
+  return (
+    <div className="tournament-skeleton skeleton">
+      <div className="img-box skeleton" />
+      <div className="title-box skeleton" />
+      <div className="text-box skeleton" />
+      <div className="text-box skeleton" style={{ width: '60%' }} />
+      <div className="btn-box skeleton" />
+    </div>
+  )
+}
+
 export default function ProjectPage({ onNavigate, user, onAuthChange }) {
-  const [stats, setStats] = useState(STATS_FALLBACK)
-  const [tournaments, setTournaments] = useState(TOURNAMENTS_FALLBACK)
+  const [stats, setStats] = useState([])
+  const [tournaments, setTournaments] = useState([]) // Będzie zawierał tylko top 3 turnieje z widoku ProjectPage
+  const [isLoading, setIsLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showEnrollModal, setShowEnrollModal] = useState(false)
   const [selectedTournament, setSelectedTournament] = useState(null)
-  const [tournamentFilter, setTournamentFilter] = useState('all')
-
-  const filteredTournaments = tournaments.filter(t => 
-    tournamentFilter === 'all' ? true : t.status === tournamentFilter
-  )
 
   useEffect(() => {
-    if (!supabase) {
-      if (import.meta.env.DEV) console.log('No Supabase connection. Using STATS_FALLBACK and TOURNAMENTS_FALLBACK.');
-      return;
+    let mounted = true
+    
+    // Safety fallback timeout (3s)
+    const timeout = setTimeout(() => {
+      if (mounted && isLoading) {
+        if (import.meta.env.DEV) console.log('🕒 Supabase timeout (3s). Using fallbacks.');
+        if (stats.length === 0) setStats(STATS_FALLBACK);
+        if (tournaments.length === 0) setTournaments(TOURNAMENTS_FALLBACK);
+        setIsLoading(false);
+      }
+    }, 3000)
+
+    const fetchData = async () => {
+      if (!supabase) return
+
+      try {
+        // Fetch stats
+        const { data: sData } = await supabase
+          .from('stats')
+          .select('value, label, sort_order')
+          .order('sort_order')
+        
+        if (mounted && sData && sData.length > 0) {
+          setStats(sData)
+        } else if (mounted) {
+          setStats(STATS_FALLBACK)
+        }
+
+        // Fetch tournaments
+        const { data: tData } = await supabase
+          .from('tournaments')
+          .select('*, teams(count)')
+          .order('start_date', { ascending: true })
+
+        if (mounted && tData) {
+          const mappedData = tData.map(t => ({
+            id: t.id,
+            title: t.name,
+            game: t.game,
+            description: t.description,
+            date: t.start_date,
+            max_participants: t.max_teams,
+            status: t.status === 'open' ? 'upcoming' : (t.status === 'ongoing' ? 'live' : (t.status === 'finished' ? 'completed' : t.status)),
+            prize_pool: t.prize_pool,
+            participants_count: t.teams?.[0]?.count || 0
+          }))
+          
+          if (mappedData.length > 0) {
+            // Filtrujemy do nowej polityki widoku
+            const upcoming = mappedData.filter(t => t.status === 'upcoming' || t.status === 'live').slice(0, 2);
+            const completed = mappedData.filter(t => t.status === 'completed').slice(0, 1);
+            setTournaments([...upcoming, ...completed])
+          } else {
+            const upMock = TOURNAMENTS_FALLBACK.filter(t => t.status === 'upcoming' || t.status === 'live').slice(0, 2);
+            const coMock = TOURNAMENTS_FALLBACK.filter(t => t.status === 'completed').slice(0, 1);
+            setTournaments([...upMock, ...coMock])
+          }
+        }
+      } catch (err) {
+        if (mounted) {
+          setStats(STATS_FALLBACK)
+          setTournaments(TOURNAMENTS_FALLBACK)
+        }
+      } finally {
+        if (mounted) {
+          clearTimeout(timeout)
+          setIsLoading(false)
+        }
+      }
     }
-    supabase
-      .from('stats')
-      .select('value, label, sort_order')
-      .order('sort_order')
-      .then(({ data, error }) => {
-        if (!error && data && data.length > 0) {
-          if (import.meta.env.DEV) console.log('🗄️ Stats fetched from Supabase');
-          setStats(data)
-        } else {
-          if (import.meta.env.DEV) console.log('⚠️ Failed to fetch stats from Supabase or table empty. Using STATS_FALLBACK.');
-        }
-      })
-    supabase
-      .from('tournaments')
-      .select('*')
-      .order('date', { ascending: true })
-      .then(({ data, error }) => {
-        if (!error && data && data.length > 0) {
-          if (import.meta.env.DEV) console.log('🗄️ Tournaments fetched from Supabase');
-          setTournaments(data)
-        } else {
-          if (import.meta.env.DEV) console.log('⚠️ Failed to fetch tournaments from Supabase or table empty. Using TOURNAMENTS_FALLBACK.');
-        }
-      })
+
+    fetchData()
+
+    return () => {
+      mounted = false
+      clearTimeout(timeout)
+    }
   }, [])
 
 
@@ -563,12 +629,21 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
             </p>
           </div>
           <div className="stats-row">
-            {stats.map((stat) => (
-              <div key={stat.label} className="stat-card">
-                <span className="stat-card__value">{stat.value}</span>
-                <span className="stat-card__label">{stat.label}</span>
-              </div>
-            ))}
+            {isLoading ? (
+              <>
+                <StatSkeleton />
+                <StatSkeleton />
+                <StatSkeleton />
+                <StatSkeleton />
+              </>
+            ) : (
+              stats.map((stat) => (
+                <div key={stat.label} className="stat-card">
+                  <span className="stat-card__value">{stat.value}</span>
+                  <span className="stat-card__label">{stat.label}</span>
+                </div>
+              ))
+            )}
           </div>
         </section>
 
@@ -595,43 +670,28 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
         <section className="project-section">
           <div className="project-section__header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 className="project-section__title">🏆 Turnieje</h2>
+              <h2 className="project-section__title">🏆 Wybrane Turnieje</h2>
               <p className="project-section__subtitle">
-                Nadchodzące i zakończone wydarzenia e-sportowe
+                Najbliższe nadchodzące i ostatnie wydarzenia e-sportowe
               </p>
             </div>
-            
-            <div className="tournament-filters">
-              <button 
-                className={`gh-filter-btn ${tournamentFilter === 'all' ? 'gh-filter-btn--active' : ''}`}
-                onClick={() => setTournamentFilter('all')}
-              >
-                Wszystkie
-              </button>
-              <button 
-                className={`gh-filter-btn ${tournamentFilter === 'upcoming' ? 'gh-filter-btn--active' : ''}`}
-                onClick={() => setTournamentFilter('upcoming')}
-              >
-                Nadchodzące
-              </button>
-              <button 
-                className={`gh-filter-btn ${tournamentFilter === 'live' ? 'gh-filter-btn--active' : ''}`}
-                onClick={() => setTournamentFilter('live')}
-              >
-                Na żywo
-              </button>
-              <button 
-                className={`gh-filter-btn ${tournamentFilter === 'completed' ? 'gh-filter-btn--active' : ''}`}
-                onClick={() => setTournamentFilter('completed')}
-              >
-                Zakończone
-              </button>
-            </div>
+            <button 
+              className="gh-btn gh-btn--outline" 
+              onClick={() => onNavigate('tournaments-list')}
+            >
+              Zobacz Wszystkie ➔
+            </button>
           </div>
 
-          {filteredTournaments.length > 0 ? (
+          {isLoading ? (
             <div className="project-grid project-grid--3">
-              {filteredTournaments.map((t) => (
+              <TournamentSkeleton />
+              <TournamentSkeleton />
+              <TournamentSkeleton />
+            </div>
+          ) : tournaments.length > 0 ? (
+            <div className="project-grid project-grid--3">
+              {tournaments.map((t) => (
                 <div key={t.id} className={`tournament-card tournament-card--${t.status}`}>
                 <div className="tournament-card__header">
                   <span className={`tournament-card__badge tournament-card__badge--${t.status}`}>
@@ -661,25 +721,16 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
                     </span>
                   </div>
                 </div>
-                {t.status === 'upcoming' && (
-                  <button className="tournament-card__btn" onClick={() => { 
-                    setSelectedTournament(t); 
-                    if (user) {
-                      setShowEnrollModal(true);
-                    } else {
-                      setShowModal(true); 
-                    }
-                  }}>
-                    🎮 Zapisz się
+                  <button className="tournament-card__btn" onClick={() => onNavigate('tournament-details', t.id)}>
+                    🔍 Zobacz szczegóły
                   </button>
-                )}
               </div>
             ))}
             </div>
           ) : (
             <div className="gh-empty-state">
               <span className="gh-empty-state__icon">🕵️</span>
-              <p>Brak turniejów w wybranej kategorii.</p>
+              <p>Obecnie brak przypisanych turniejów w zespole projektowym.</p>
             </div>
           )}
         </section>

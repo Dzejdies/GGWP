@@ -1,7 +1,8 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
+import { useToast } from '../components/Toast'
 import './AccountPage.css'
 
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/
@@ -31,7 +32,7 @@ function parsePhone(fullPhone) {
   return { dialCode: '+48', phone: fullPhone }
 }
 
-export default function AccountPage({ onNavigate, user, onAuthChange }) {
+export default function AccountPage({ onNavigate, user, onAuthChange, initialTabData }) {
   const meta = user?.user_metadata || {}
   const parsed = parsePhone(meta.phone)
 
@@ -42,6 +43,8 @@ export default function AccountPage({ onNavigate, user, onAuthChange }) {
   const [message, setMessage] = useState(meta.message || '')
   const [profileStatus, setProfileStatus] = useState('idle')
   const [profileError, setProfileError] = useState('')
+  const { showToast } = useToast()
+
 
   // Avatar state
   const [avatarUrl, setAvatarUrl] = useState(meta.avatar_url || '')
@@ -64,6 +67,227 @@ export default function AccountPage({ onNavigate, user, onAuthChange }) {
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteStatus, setDeleteStatus] = useState('idle')
+
+  // ── INT-21: Teams State ──
+  const activeTab = initialTabData?.tab || 'profile'
+  const [myTeams, setMyTeams] = useState([])
+  const [invites, setInvites] = useState([])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [searching, setSearching] = useState(false)
+  const [teamsLoading, setTeamsLoading] = useState(false)
+  
+  // Create Team state
+  const [newTeamName, setNewTeamName] = useState('')
+  const [newTeamTag, setNewTeamTag] = useState('')
+
+  useEffect(() => {
+    if (user && activeTab === 'teams') {
+      fetchTeamsData()
+    }
+  }, [user, activeTab])
+
+  const fetchTeamsData = async () => {
+    setTeamsLoading(true)
+    try {
+      // 1. Fetch teams where I am a member (accepted)
+      const { data: teamsWithMembers, error: memberError } = await supabase
+        .from('teams')
+        .select(`
+          id, team_name, tag, avatar_url, leader_id,
+          team_members!inner (user_id, status),
+          members:team_members (
+            id, status, user_id,
+            profile:profiles (nickname, avatar_url)
+          )
+        `)
+        .eq('team_members.user_id', user.id)
+        .eq('team_members.status', 'accepted')
+
+      if (memberError) throw memberError
+      
+      setMyTeams(teamsWithMembers || [])
+
+      // 2. Fetch pending invitations for me
+      const { data: inviteData, error: inviteError } = await supabase
+        .from('team_members')
+        .select(`
+          id,
+          team:teams (
+            id, team_name, tag, avatar_url
+          )
+        `)
+        .eq('user_id', user.id)
+        .eq('status', 'pending')
+
+      if (inviteError) throw inviteError
+      setInvites(inviteData || [])
+    } catch (err) {
+      console.error('Błąd pobierania drużyn:', err)
+    } finally {
+      setTeamsLoading(false)
+    }
+  }
+
+  const handleSearchUsers = async () => {
+    if (searchQuery.length < 2) return
+    setSearching(true)
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, nickname, avatar_url')
+      .ilike('nickname', `%${searchQuery}%`)
+      .limit(5)
+    
+    if (!error) setSearchResults(data)
+    setSearching(false)
+  }
+
+  const handleInvitePlayer = async (teamId, targetUserId) => {
+    const { error } = await supabase
+      .from('team_members')
+      .insert({
+        team_id: teamId,
+        user_id: targetUserId,
+        status: 'pending'
+      })
+    
+    if (error) {
+      showToast('Ten gracz jest już zaproszony lub należy do drużyny.', 'error')
+    } else {
+      const targetTeam = myTeams.find(t => t.id === teamId)
+      // Notification for target user
+      await supabase.from('notifications').insert({
+        user_id: targetUserId,
+        title: '📩 Nowe Zaproszenie',
+        message: `Zostałeś zaproszony do drużyny ${targetTeam?.team_name || 'Nowej Drużyny'}.`,
+        type: 'team'
+      })
+
+      showToast('Zaproszenie wysłane!')
+      setSearchResults([])
+      setSearchQuery('')
+    }
+  }
+
+  const handleRespondInvite = async (inviteId, status) => {
+    // Need to find the team info before updating
+    const invite = pendingInvites.find(i => i.id === inviteId)
+    
+    const { error } = await supabase
+      .from('team_members')
+      .update({ status })
+      .eq('id', inviteId)
+    
+    if (!error) {
+      if (invite) {
+        // Notification for the team leader
+        await supabase.from('notifications').insert({
+          user_id: invite.teams.leader_id,
+          title: status === 'accepted' ? '✅ Zaproszenie Zaakceptowane' : '❌ Zaproszenie Odrzucone',
+          message: `Gracz ${nickname} ${status === 'accepted' ? 'dołączył do' : 'odrzucił zaproszenie do'} drużyny ${invite.teams.team_name}.`,
+          type: 'team'
+        })
+      }
+      showToast(status === 'accepted' ? 'Dołączyłeś do drużyny!' : 'Zaproszenie odrzucone.')
+      fetchTeamsData()
+    }
+  }
+
+
+  const handleKickMember = async (teamId, targetUserId) => {
+    if (!confirm('Czy na pewno chcesz usunąć tego członka?')) return
+    const { error } = await supabase
+      .from('team_members')
+      .delete()
+      .eq('team_id', teamId)
+      .eq('user_id', targetUserId)
+    
+    if (!error) fetchTeamsData()
+  }
+
+  const handleLeaveTeam = async (teamId) => {
+    const targetTeam = myTeams.find(t => t.id === teamId)
+    if (!targetTeam) return
+
+    const isLeader = targetTeam.leader_id === user.id
+    const promptMsg = isLeader 
+      ? 'Jesteś liderem tej drużyny. Jeśli ją opuścisz, dowodzenie zostanie przekazane losowemu członkowi. Kontynuować?'
+      : 'Czy na pewno chcesz opuścić drużynę?'
+
+    if (!confirm(promptMsg)) return
+
+    try {
+      if (isLeader) {
+        const others = targetTeam.members.filter(m => m.user_id !== user.id && m.status === 'accepted')
+        
+        if (others.length > 0) {
+          const newBoss = others[Math.floor(Math.random() * others.length)]
+          
+          await supabase
+            .from('teams')
+            .update({ leader_id: newBoss.user_id })
+            .eq('id', teamId)
+
+          // Persistent Notification for new leader
+          await supabase.from('notifications').insert({
+            user_id: newBoss.user_id,
+            title: '👑 Zostałeś Liderem!',
+            message: `Gracz ${nickname} opuścił drużynę ${targetTeam.team_name}. Dowodzenie przekazano Tobie.`,
+            type: 'team'
+          })
+          
+          showToast(`Przekazałeś dowodzenie graczowi ${newBoss.profile?.nickname}`)
+        } else {
+          // No one left - delete team
+          await supabase.from('teams').delete().eq('id', teamId)
+          showToast('Wszyscy opuścili drużunę. Zespół został rozwiązany.')
+        }
+      }
+
+      const { error } = await supabase
+        .from('team_members')
+        .delete()
+        .eq('team_id', teamId)
+        .eq('user_id', user.id)
+      
+      if (!error) {
+        showToast('Opuściłeś drużynę.')
+        fetchTeamsData()
+      }
+    } catch (err) {
+      showToast('Wystąpił błąd przy opuszczaniu drużyny.', 'error')
+    }
+  }
+
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName || !newTeamTag) return
+    const { data: team, error: tErr } = await supabase
+      .from('teams')
+      .insert({
+        team_name: newTeamName,
+        tag: newTeamTag.toUpperCase(),
+        leader_id: user.id
+      })
+      .select()
+      .single()
+    
+    if (tErr) {
+      showToast('Błąd tworzenia drużyny: ' + tErr.message, 'error')
+      return
+    }
+
+    // Auto-add leader as accepted member
+    await supabase.from('team_members').insert({
+      team_id: team.id,
+      user_id: user.id,
+      status: 'accepted'
+    })
+
+    setNewTeamName('')
+    setNewTeamTag('')
+    fetchTeamsData()
+  }
 
   if (!user) {
     return (
@@ -242,7 +466,13 @@ export default function AccountPage({ onNavigate, user, onAuthChange }) {
 
   return (
     <div className="gh-page">
-      <Navbar onNavigate={onNavigate} currentView="account" user={user} onAuthChange={onAuthChange} />
+      <Navbar 
+        onNavigate={onNavigate} 
+        currentView="account" 
+        user={user} 
+        onAuthChange={onAuthChange}
+        initialTabData={initialTabData}
+      />
 
       {showDeleteModal && (
         <div className="modal-overlay" onClick={() => setShowDeleteModal(false)}>
@@ -272,8 +502,14 @@ export default function AccountPage({ onNavigate, user, onAuthChange }) {
       )}
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
-        <h1 className="gh-title" data-text="Moje konto" style={{ marginBottom: '2rem' }}>Moje konto</h1>
+        <div className="account-header-row">
+          <h1 className="gh-title" data-text={activeTab === 'teams' ? "Moje Drużyny" : "Moje Konto"}>
+            {activeTab === 'teams' ? "Moje Drużyny" : "Moje Konto"}
+          </h1>
+        </div>
 
+        {activeTab === 'profile' ? (
+          <>
         {/* ── Avatar Section ── */}
         <section className="account-section">
           <div className="account-avatar-section">
@@ -451,8 +687,133 @@ export default function AccountPage({ onNavigate, user, onAuthChange }) {
           >
             🗑️ Usuń konto
           </button>
-        </section>
-      </main>
+          </section>
+          </>
+        ) : (
+          <div className="teams-view">
+            {/* ── Invitations ── */}
+            {invites.length > 0 && (
+              <section className="account-section teams-invites-section">
+                <h2 className="account-section__title">📬 Otrzymane zaproszenia</h2>
+                <div className="invites-grid">
+                  {invites.map(inv => (
+                    <div key={inv.id} className="invite-card">
+                      <div className="invite-info">
+                        <strong>{inv.team.team_name} [{inv.team.tag}]</strong>
+                        <p>Zaprasza Cię do dołączenia</p>
+                      </div>
+                      <div className="invite-actions">
+                        <button className="gh-btn gh-btn--success btn-sm" onClick={() => handleRespondInvite(inv.id, 'accepted')}>Akceptuj</button>
+                        <button className="gh-btn gh-btn--outline btn-sm" style={{borderColor: '#f87171', color: '#f87171'}} onClick={() => handleRespondInvite(inv.id, 'rejected')}>Odrzuć</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* ── My Teams List ── */}
+            <section className="account-section">
+              <h2 className="account-section__title">🏆 Twoje składy</h2>
+              {teamsLoading ? (
+                <p>Ładowanie drużyn...</p>
+              ) : myTeams.length === 0 ? (
+                <p style={{color: 'var(--gh-muted)'}}>Nie należysz jeszcze do żadnej drużyny.</p>
+              ) : (
+                <div className="teams-list">
+                  {myTeams.map(t => (
+                    <div key={t.id} className="team-item">
+                      <div className="team-item__main">
+                        <div className="team-item__avatar">
+                          {t.avatar_url ? <img src={t.avatar_url} alt="" /> : <span>{t.tag}</span>}
+                        </div>
+                        <div className="team-item__info">
+                          <h3>{t.team_name} <span className="team-tag">[{t.tag}]</span></h3>
+                          <span className="team-role-badge">
+                            {t.leader_id === user.id ? '👑 Lider' : '🎯 Członek'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="team-item__members">
+                        <div className="members-list-mini">
+                          {t.members.map(m => (
+                            <div key={m.user_id} className={`member-chip ${m.status === 'pending' ? 'pending' : ''}`}>
+                              <img src={m.profile?.avatar_url || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + (m.profile?.nickname || 'user')} alt="" />
+                              <span>{m.profile?.nickname}</span>
+                              {t.leader_id === user.id && m.user_id !== user.id && (
+                                <button className="kick-small" onClick={() => handleKickMember(t.id, m.user_id)}>×</button>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      <div className="team-item__actions">
+                        {t.leader_id === user.id && (
+                          <div className="user-search-box">
+                            <input 
+                              placeholder="➕ Zaproś gracza..." 
+                              className="account-input search-input"
+                              onChange={(e) => {
+                                setSearchQuery(e.target.value);
+                                if (e.target.value.length > 1) handleSearchUsers();
+                              }}
+                            />
+                            {searchQuery.length > 1 && (
+                              <div className="search-dropdown">
+                                {searching ? <p className="p-2 text-xs">Szukanie...</p> : 
+                                 searchResults.length === 0 ? <p className="p-2 text-xs">Brak</p> :
+                                 searchResults.map(res => (
+                                   <div key={res.id} className="search-res-item" onClick={() => handleInvitePlayer(t.id, res.id)}>
+                                     <span>{res.nickname}</span>
+                                     <button className="btn-invite">Zaproś</button>
+                                   </div>
+                                 ))
+                                }
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <button className="gh-btn gh-btn--outline btn-sm" onClick={() => handleLeaveTeam(t.id)}>Opuść</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </section>
+
+            {/* ── Create Team ── */}
+            <section className="account-section">
+              <h2 className="account-section__title">➕ Załóż nową drużynę</h2>
+              <div className="create-team-form">
+                <div className="form-group">
+                  <label className="account-label">Nazwa Drużyny</label>
+                  <input 
+                    className="account-input" 
+                    placeholder="np. Polish Power" 
+                    value={newTeamName}
+                    onChange={e => setNewTeamName(e.target.value)}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="account-label">Tag (2-5 znaków)</label>
+                  <input 
+                    className="account-input" 
+                    placeholder="PPW" 
+                    maxLength={5}
+                    value={newTeamTag}
+                    onChange={e => setNewTeamTag(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <button className="gh-btn" style={{marginTop: '1rem'}} onClick={handleCreateTeam}>
+                  🚀 Stwórz Drużynę
+                </button>
+              </div>
+            </section>
+          </div>
+        )}
+        </main>
 
       <Footer />
     </div>
