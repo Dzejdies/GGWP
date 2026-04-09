@@ -1,5 +1,5 @@
-export default function NotificationRedirect({ onNavigate, n }) {
-    switch (n.type) {
+export default function NotificationRedirect({ onNavigate, notification }) {
+    switch (notification.type) {
         case "team":
             return onNavigate('account', { tab: 'teams' })
         case "tournament":

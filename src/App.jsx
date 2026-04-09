@@ -15,16 +15,18 @@ import TournamentDetailsPage from './pages/TournamentDetailsPage'
 import DashboardPage from './pages/DashboardPage'
 import TournamentsListPage from './pages/TournamentsListPage'
 import AboutPage from './pages/AboutPage'
+import LiveStreamPage from './pages/liveStreamPage'
+import FloatingStream from './components/FloatingStream'
 import { ToastProvider } from './components/Toast'
 import { supabase } from './lib/supabase'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 
 export default function App() {
   const [user, setUser] = useState(null)
-  
+
   const routerNavigate = useNavigate()
   const location = useLocation()
-  
+
   // Dawny selectedData staje się teraz stanem routingu (location.state)
   const selectedData = location.state || null;
 
@@ -57,10 +59,10 @@ export default function App() {
       if (event === 'SIGNED_IN') {
         setUser(session?.user ?? null)
         if (window.location.hash.includes('access_token')) {
-            routerNavigate('/confirmed')
-            window.history.replaceState(null, '', window.location.pathname)
+          routerNavigate('/confirmed')
+          window.history.replaceState(null, '', window.location.pathname)
         } else if (location.pathname === '/' || location.pathname === '/landing') {
-            routerNavigate('/dashboard')
+          routerNavigate('/dashboard')
         }
       } else if (event === 'SIGNED_OUT') {
         setUser(null)
@@ -91,6 +93,7 @@ export default function App() {
     else if (target === 'tournament-details') path = `/tournaments/${data}`
     else if (target === 'confirmed') path = '/confirmed'
     else if (target === 'home') path = '/about' // nowy routing do AboutPage
+    else if (target === 'live-stream') path = '/live-stream'
 
     routerNavigate(path, { state: data })
   }
@@ -99,23 +102,27 @@ export default function App() {
     <ToastProvider>
       <Routes>
         <Route path="/" element={<LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
-        
+
         {/* Zabezpieczenie ścieżek przez user ? ... : ... */}
-        <Route path="/dashboard" element={user ? <DashboardPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} /> : <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange}/>} />
-        
+        <Route path="/dashboard" element={user ? <DashboardPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} /> : <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+
         <Route path="/analysis" element={<AnalysisPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
         <Route path="/project" element={<ProjectPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
         <Route path="/plan" element={<PlanPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
         <Route path="/confirmed" element={<ConfirmationPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
         <Route path="/account" element={<AccountPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} initialTabData={selectedData} />} />
-        <Route path="/admin" element={user ? <AdminPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} /> : <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange}/>} />
-        
+        <Route path="/admin" element={user ? <AdminPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} /> : <LandingPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
+
         {/* Parametry w URL! */}
         <Route path="/tournaments/:id" element={<TournamentDetailsPage tournamentId={selectedData} onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
         <Route path="/tournaments-list" element={<TournamentsListPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} />} />
-        
+
         <Route path="/about" element={<AboutPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} initialTabData={selectedData} />} />
+        {/* Change channel to official channel, this is just a elite dangerous streamer :P */}
+        <Route path="/live-stream" element={<LiveStreamPage onNavigate={navigate} user={user} onAuthChange={handleAuthChange} initialTabData={selectedData} channel="roots_rat" />} />
       </Routes>
+      {/* Change channel to official channel, this is just a elite dangerous streamer :P */}
+      <FloatingStream channel="roots_rat" isActive={true} />
     </ToastProvider>
   )
 }

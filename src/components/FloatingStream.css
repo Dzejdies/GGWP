@@ -1,0 +1,71 @@
+.floating-stream {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 320px;
+  background: rgba(14, 14, 14, 0.95);
+  border: 1px solid var(--gh-purple);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8), 0 0 20px rgba(124, 58, 237, 0.4);
+  z-index: 1000;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+/* Wersja zminimalizowana */
+.floating-stream.minimized {
+  width: auto;
+  border-radius: 8px;
+  padding: 0;
+}
+
+.floating-stream-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: var(--gh-purple-lt);
+  border-bottom: 1px solid var(--gh-border);
+}
+
+.floating-stream.minimized .floating-stream-header {
+  border-bottom: none;
+}
+
+.fs-title {
+  color: white;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.fs-title:hover {
+  text-decoration: underline;
+}
+
+.fs-toggle-btn {
+  background: transparent;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.2rem;
+  margin-left: 1rem;
+  color: white;
+  transition: transform 0.2s;
+}
+
+.fs-toggle-btn:hover {
+  transform: scale(1.1);
+}
+
+.floating-stream-content {
+  height: 180px;
+  width: 100%;
+  background: #000;
+}
