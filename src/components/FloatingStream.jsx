@@ -65,7 +65,7 @@ export default function FloatingStream({ channel, isActive = true }) {
       {!isMinimized && (
         <div className="floating-stream-content">
           <iframe
-            src={`https://player.twitch.tv/?channel=${channel}&parent=localhost&muted=true`}
+            src={`https://player.twitch.tv/?channel=${channel}&parent=${window.location.hostname}&muted=true`}
             height="100%"
             width="100%"
             allowFullScreen

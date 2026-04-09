@@ -13,12 +13,12 @@ export default function LiveStreamPage({ onNavigate, user, onAuthChange, channel
                     <div className="stream-box">
                         <h1>Live Stream</h1>
                         <iframe className='twitch-stream'
-                            src={`https://player.twitch.tv/?channel=${channel}&parent=localhost`}
+                            src={`https://player.twitch.tv/?channel=${channel}&parent=${window.location.hostname}`}
                             allowFullScreen
                         ></iframe>
                     </div>
                     <div className="chat-container">
-                        <iframe src={`https://www.twitch.tv/embed/${channel}/chat?parent=localhost&darkpopout`} className="chatBox"></iframe>
+                        <iframe src={`https://www.twitch.tv/embed/${channel}/chat?parent=${window.location.hostname}&darkpopout`} className="chatBox"></iframe>
                     </div>
                 </div>
             </main >
