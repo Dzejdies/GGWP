@@ -255,7 +255,7 @@ export default function DashboardPage({ onNavigate, user, onAuthChange }) {
               <div className="feed-content">
                 {feed.map(item => (
                   <div key={item.id} className="feed-item" onClick={() => {
-                    NotificationRedirect({ onNavigate, n: item })
+                    NotificationRedirect({ onNavigate, notification: item })
                   }}>
                     <div className="feed-icon">{item.icon}</div>
                     <div className="feed-text">

@@ -110,7 +110,7 @@ export default function NotificationCenter({ user, onNavigate }) {
             ) : (
               notifications.map(n => (
                 <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`} onClick={() => {
-                  NotificationRedirect({ onNavigate, n })
+                  NotificationRedirect({ onNavigate, notification: n })
                 }}>
                   <span className="notif-icon">{getIcon(n.type)}</span>
                   <div className="notif-content">
