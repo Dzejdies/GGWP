@@ -502,13 +502,35 @@ export default function AdminPage({ onNavigate, user, onAuthChange }) {
                             </div>
                             <div className="admin-form__group">
                               <label className="admin-form__label">Data Startu</label>
-                              <input 
-                                type="datetime-local" 
-                                className="admin-form__input" 
-                                value={newTournament.start_date} 
-                                onChange={e => setNewTournament({...newTournament, start_date: e.target.value})}
-                                onClick={(e) => e.target.showPicker && e.target.showPicker()}
-                              />
+                              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <input
+                                  type="date"
+                                  className="admin-form__input"
+                                  value={newTournament.start_date ? newTournament.start_date.split('T')[0] : ''}
+                                  onChange={e => {
+                                    const time = newTournament.start_date ? (newTournament.start_date.split('T')[1] || '00:00') : '00:00'
+                                    setNewTournament({ ...newTournament, start_date: `${e.target.value}T${time}` })
+                                  }}
+                                />
+                                <input
+                                  type="text"
+                                  className="admin-form__input"
+                                  placeholder="HH:MM"
+                                  maxLength={5}
+                                  pattern="[0-2][0-9]:[0-5][0-9]"
+                                  value={newTournament.start_date ? (newTournament.start_date.split('T')[1] || '') : ''}
+                                  onChange={e => {
+                                    let val = e.target.value.replace(/[^0-9:]/g, '')
+                                    if (val.length === 2 && !val.includes(':')) val = val + ':'
+                                    const [hh, mm] = val.split(':')
+                                    if (hh !== undefined && hh.length === 2 && parseInt(hh) > 23) return
+                                    if (mm !== undefined && mm.length === 2 && parseInt(mm) > 59) return
+                                    const date = newTournament.start_date ? (newTournament.start_date.split('T')[0] || '') : ''
+                                    setNewTournament({ ...newTournament, start_date: `${date}T${val}` })
+                                  }}
+                                  style={{ maxWidth: '80px' }}
+                                />
+                              </div>
                             </div>
                             <div className="admin-form__group">
                               <label className="admin-form__label">Max Drużyn</label>

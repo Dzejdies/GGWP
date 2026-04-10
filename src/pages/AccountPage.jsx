@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useToast } from '../components/Toast'
+import PartyChat from '../components/PartyChat'
 import './AccountPage.css'
 import '../components/button.css'
 
@@ -77,7 +78,8 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
   const [searchResults, setSearchResults] = useState([])
   const [searching, setSearching] = useState(false)
   const [teamsLoading, setTeamsLoading] = useState(false)
-  
+  const [openChatTeamId, setOpenChatTeamId] = useState(null)
+
   // Create Team state
   const [newTeamName, setNewTeamName] = useState('')
   const [newTeamTag, setNewTeamTag] = useState('')
@@ -115,7 +117,7 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
         .select(`
           id,
           team:teams (
-            id, team_name, tag, avatar_url
+            id, team_name, tag, avatar_url, leader_id
           )
         `)
         .eq('user_id', user.id)
@@ -171,21 +173,19 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
   }
 
   const handleRespondInvite = async (inviteId, status) => {
-    // Need to find the team info before updating
-    const invite = pendingInvites.find(i => i.id === inviteId)
-    
+    const invite = invites.find(i => i.id === inviteId)
+
     const { error } = await supabase
       .from('team_members')
       .update({ status })
       .eq('id', inviteId)
-    
+
     if (!error) {
-      if (invite) {
-        // Notification for the team leader
+      if (invite?.team?.leader_id) {
         await supabase.from('notifications').insert({
-          user_id: invite.teams.leader_id,
+          user_id: invite.team.leader_id,
           title: status === 'accepted' ? '✅ Zaproszenie Zaakceptowane' : '❌ Zaproszenie Odrzucone',
-          message: `Gracz ${nickname} ${status === 'accepted' ? 'dołączył do' : 'odrzucił zaproszenie do'} drużyny ${invite.teams.team_name}.`,
+          message: `Gracz ${nickname} ${status === 'accepted' ? 'dołączył do' : 'odrzucił zaproszenie do'} drużyny ${invite.team.team_name}.`,
           type: 'team'
         })
       }
@@ -753,8 +753,8 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
                       <div className="team-item__actions">
                         {t.leader_id === user.id && (
                           <div className="user-search-box">
-                            <input 
-                              placeholder="➕ Zaproś gracza..." 
+                            <input
+                              placeholder="➕ Zaproś gracza..."
                               className="account-input search-input"
                               onChange={(e) => {
                                 setSearchQuery(e.target.value);
@@ -763,7 +763,7 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
                             />
                             {searchQuery.length > 1 && (
                               <div className="search-dropdown">
-                                {searching ? <p className="p-2 text-xs">Szukanie...</p> : 
+                                {searching ? <p className="p-2 text-xs">Szukanie...</p> :
                                  searchResults.length === 0 ? <p className="p-2 text-xs">Brak</p> :
                                  searchResults.map(res => (
                                    <div key={res.id} className="search-res-item" onClick={() => handleInvitePlayer(t.id, res.id)}>
@@ -776,8 +776,18 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
                             )}
                           </div>
                         )}
+                        <button
+                          className={`gh-btn btn-sm ${openChatTeamId === t.id ? '' : 'gh-btn--outline'}`}
+                          onClick={() => setOpenChatTeamId(prev => prev === t.id ? null : t.id)}
+                        >
+                          💬 Czat party
+                        </button>
                         <button className="gh-btn gh-btn--outline btn-sm" onClick={() => handleLeaveTeam(t.id)}>Opuść</button>
                       </div>
+
+                      {openChatTeamId === t.id && (
+                        <PartyChat team={t} user={user} />
+                      )}
                     </div>
                   ))}
                 </div>

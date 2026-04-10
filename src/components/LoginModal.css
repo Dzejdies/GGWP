@@ -1,5 +1,38 @@
 /* LoginModal — reuses .modal styles from ProjectPage.css */
 
+/* ── Tabs ── */
+.login-modal__tabs {
+  display: flex;
+  border-bottom: 1px solid var(--gh-border);
+  margin-bottom: 1.5rem;
+  gap: 0;
+}
+
+.login-modal__tab {
+  flex: 1;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 0.65rem 0;
+  font-family: 'Russo One', sans-serif;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--gh-muted);
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  margin-bottom: -1px;
+}
+
+.login-modal__tab:hover {
+  color: var(--gh-purple-lt);
+}
+
+.login-modal__tab--active {
+  color: var(--gh-purple-lt);
+  border-bottom-color: var(--gh-purple-lt);
+}
+
 .login-modal__submit {
   margin-top: 1rem;
 }

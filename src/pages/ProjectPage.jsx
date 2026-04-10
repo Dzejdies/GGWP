@@ -3,7 +3,7 @@ import './ProjectPage.css'
 import Navbar from '../components/Navbar'
 import { supabase } from '../lib/supabase'
 import Footer from '../components/Footer'
-import '../components/button.css'
+import LoginModal from '../components/LoginModal'
 
 const GOALS = [
   {
@@ -564,9 +564,14 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
   return (
     <div className="gh-page">
       {showModal && (
-        <RegistrationModal 
-          onClose={() => { setShowModal(false); setSelectedTournament(null); }} 
-          tournament={selectedTournament} 
+        <LoginModal
+          initialMode="register"
+          onClose={() => { setShowModal(false); setSelectedTournament(null) }}
+          onSuccess={(session) => {
+            onAuthChange(session.user)
+            setShowModal(false)
+            setSelectedTournament(null)
+          }}
         />
       )}
       {showEnrollModal && (

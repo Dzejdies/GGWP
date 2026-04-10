@@ -422,6 +422,12 @@
   min-height: 80px;
 }
 
+.admin-form__input[type="datetime-local"],
+.admin-form__input[type="date"],
+.admin-form__input[type="time"] {
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
 .admin-form__input[type="datetime-local"]::-webkit-calendar-picker-indicator {
   cursor: pointer;
   filter: invert(0.8) sepia(100%) saturate(500%) hue-rotate(140deg) brightness(1.2); /* Stylizacja na kolor Cyan */

@@ -4,29 +4,33 @@ import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { supabase } from '../lib/supabase'
 import WizardRegistrationModal from '../components/WizardRegistrationModal'
+import LoginModal from '../components/LoginModal'
 import { useParams } from 'react-router-dom'
 import '../components/button.css'
+import { useAuthGuard } from '../hooks/useAuthGuard.jsx'
 
 export default function TournamentDetailsPage({ tournamentId: propsTournamentId, onNavigate, user, onAuthChange }) {
   const { id } = useParams()
   const tournamentId = id || propsTournamentId;
-  
+
+  const { requireAuth, AuthModal } = useAuthGuard(user, onAuthChange)
+
+  // Auth gate — blokada strony dla niezalogowanych
+  const [showPageAuthGate, setShowPageAuthGate] = useState(!user)
+  useEffect(() => {
+    if (user) setShowPageAuthGate(false)
+  }, [user])
+
   // Stan turnieju
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
   const [myTeam, setMyTeam] = useState(null) // Twoja drużyna
   const [isLeader, setIsLeader] = useState(false)
   const [pendingRequests, setPendingRequests] = useState([]) // Prośby do mojej drużyny
-  const [messages, setMessages] = useState([])
-  const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
 
   // Okienka (Modals)
   const [showCreateTeam, setShowCreateTeam] = useState(false)
-  const [teamForm, setTeamForm] = useState({ team_name: '' })
-
-  // Status akcji
-  const [actionStatus, setActionStatus] = useState('')
 
   useEffect(() => {
     async function fetchData() {
@@ -120,14 +124,6 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
                 }
               }
 
-              // Pobieranie wiadomości czatu
-              const { data: msgData } = await supabase
-                .from('team_messages')
-                .select('*')
-                .eq('team_id', myT.id)
-                .order('created_at', { ascending: true })
-
-              if (msgData) setMessages(msgData)
             }
           }
         }
@@ -155,23 +151,20 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
     setShowCreateTeam(false)
   }
 
-  const handleJoinTeam = async (teamId) => {
-    if (!user) {
-      alert("Musisz być zalogowany, aby dołączyć.")
-      return
-    }
+  const handleJoinTeam = (teamId) => {
+    requireAuth(async () => {
+      try {
+        const { error } = await supabase
+          .from('team_members')
+          .insert({ team_id: teamId, user_id: user.id, status: 'pending' })
 
-    try {
-      const { error } = await supabase
-        .from('team_members')
-        .insert({ team_id: teamId, user_id: user.id, status: 'pending' });
+        if (error) throw error
 
-      if (error) throw error;
-
-      alert('Wysłano prośbę do lidera drużyny! Oczekuj na akceptację.')
-    } catch (err) {
-      alert('Błąd podczas wysyłania prośby: ' + err.message)
-    }
+        alert('Wysłano prośbę do lidera drużyny! Oczekuj na akceptację.')
+      } catch (err) {
+        alert('Błąd podczas wysyłania prośby: ' + err.message)
+      }
+    })
   }
 
   const handleLeaderAction = async (reqId, action) => {
@@ -197,29 +190,26 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
     }
   }
 
-  const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || !myTeam || !user) return;
-
-    try {
-      const msg = { team_id: myTeam.id, user_id: user.id, message: newMessage.trim() };
-      const { error } = await supabase.from('team_messages').insert(msg);
-      if (!error) {
-        setMessages([...messages, { ...msg, id: Math.random(), created_at: new Date().toISOString() }]);
-        setNewMessage('');
-      } else {
-        console.error('Błąd wysyłania:', error);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }
-
   if (loading) return <div className="gh-page"><div className="gh-main">Ładowanie...</div></div>
 
   return (
     <div className="gh-page">
       <Navbar onNavigate={onNavigate} currentView="project" user={user} onAuthChange={onAuthChange} />
+
+      {/* Auth gate — blokada dla niezalogowanych */}
+      {showPageAuthGate && (
+        <LoginModal
+          initialMode="register"
+          onClose={() => onNavigate('project')}
+          onSuccess={(session) => {
+            onAuthChange(session.user)
+            setShowPageAuthGate(false)
+          }}
+        />
+      )}
+
+      {/* Modal inline guard (dla akcji w środku strony) */}
+      {AuthModal}
 
       {/* Modal tworzenia drużyny */}
       {showCreateTeam && (
@@ -241,7 +231,7 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
           <h1 className="td-hero__title">{tournament?.title}</h1>
           <p className="td-hero__subtitle">{tournament?.description}</p>
           {!myTeam && (
-            <button className="gh-btn" onClick={() => setShowCreateTeam(true)}>
+            <button className="gh-btn" onClick={() => requireAuth(() => setShowCreateTeam(true))}>
               🛡️ Utwórz własną drużynę
             </button>
           )}
@@ -271,29 +261,9 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
                   </div>
                 )}
 
-                {/* Team Chat */}
-                <div className="td-team-chat" style={{ display: 'flex', flexDirection: 'column', background: 'var(--gh-bg-secondary)', border: '1px solid var(--gh-border)', borderRadius: '6px', height: '350px' }}>
-                  <div className="td-chat-messages" style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {messages.length === 0 ? <span style={{ color: 'var(--gh-text-c)', fontSize: '0.9rem', textAlign: 'center', marginTop: 'auto', marginBottom: 'auto' }}>Brak wiadomości. Przywitaj się!</span> : (
-                      messages.map(m => (
-                        <div key={m.id} style={{
-                          alignSelf: m.user_id === user?.id ? 'flex-end' : 'flex-start',
-                          background: m.user_id === user?.id ? 'var(--gh-border)' : 'var(--gh-bg)',
-                          padding: '0.5rem 0.8rem',
-                          borderRadius: '8px',
-                          maxWidth: '80%'
-                        }}>
-                          {m.user_id !== user?.id && <div style={{ fontSize: '0.65rem', color: 'var(--gh-text-c)', marginBottom: '0.2rem' }}>Kolega z drużyny</div>}
-                          <div style={{ fontSize: '0.9rem', wordBreak: 'break-word' }}>{m.message}</div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                  <form onSubmit={handleSendMessage} style={{ display: 'flex', borderTop: '1px solid var(--gh-border)' }}>
-                    <input type="text" value={newMessage} onChange={e => setNewMessage(e.target.value)} placeholder="Napisz do drużyny..." style={{ flex: 1, background: 'transparent', border: 'none', color: 'var(--gh-text)', padding: '0.8rem', outline: 'none' }} />
-                    <button type="submit" className="gh-btn gh-btn--sm" disabled={!newMessage.trim()} style={{ margin: '0.4rem', border: 'none' }}>Wyślij</button>
-                  </form>
-                </div>
+                <p style={{ color: 'var(--gh-muted)', fontSize: '0.85rem' }}>
+                  Czat drużyny dostępny w zakładce <strong>Moje Drużyny</strong> na stronie konta.
+                </p>
               </section>
             )}
 

@@ -4,6 +4,22 @@ import './WizardRegistrationModal.css';
 import './button.css';
 
 export default function WizardRegistrationModal({ tournament, user, onClose, onSuccess }) {
+  if (!user) {
+    return (
+      <div className="modal-overlay" onClick={onClose}>
+        <div className="modal" onClick={e => e.stopPropagation()}>
+          <button className="modal__close" onClick={onClose}>✕</button>
+          <h2 className="modal__title">🔒 Wymagane logowanie</h2>
+          <p style={{ color: 'var(--gh-text-c)', marginTop: '1rem', lineHeight: 1.5 }}>
+            Aby utworzyć lub zarządzać drużyną, musisz być zalogowany.
+          </p>
+          <button className="gh-btn" onClick={onClose} style={{ marginTop: '1.5rem' }}>
+            Zamknij
+          </button>
+        </div>
+      </div>
+    )
+  }
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     team_name: '',
