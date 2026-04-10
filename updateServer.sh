@@ -5,11 +5,7 @@ cd "$SCRIPT_DIR" || exit
 git restore .
 git checkout main
 git pull
-npm install
-if npm audit --json | grep -q '"vulnerabilities":'; then
-    echo "Running npm audit fix..."
-    npm audit fix
-fi
+npm ci
 npm run build
 sudo rsync -av --delete dist/ /var/www/website/
 echo "Restarting server"
