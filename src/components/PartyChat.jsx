@@ -5,40 +5,54 @@ import './button.css'
 
 export default function PartyChat({ team, user }) {
   const [messages, setMessages] = useState([])
-  const [profiles, setProfiles] = useState({})
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const profilesRef = useRef({})
+  const [profilesVersion, setProfilesVersion] = useState(0)
   const bottomRef = useRef(null)
 
-  const fetchMessages = async () => {
+  const ensureProfile = async (userId) => {
+    if (profilesRef.current[userId]) return
     const { data } = await supabase
-      .from('team_messages')
-      .select('*')
-      .eq('team_id', team.id)
-      .order('created_at', { ascending: true })
-      .limit(100)
-
-    if (data && data.length > 0) {
-      setMessages(data)
-      const uniqueIds = [...new Set(data.map(m => m.user_id))]
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, nickname, avatar_url')
-        .in('id', uniqueIds)
-
-      if (profileData) {
-        const map = {}
-        profileData.forEach(p => { map[p.id] = p })
-        setProfiles(map)
-      }
-    } else {
-      setMessages([])
+      .from('profiles')
+      .select('id, nickname, avatar_url')
+      .eq('id', userId)
+      .single()
+    if (data) {
+      profilesRef.current = { ...profilesRef.current, [data.id]: data }
+      setProfilesVersion(v => v + 1)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
-    fetchMessages()
+    const init = async () => {
+      const { data } = await supabase
+        .from('team_messages')
+        .select('*')
+        .eq('team_id', team.id)
+        .order('created_at', { ascending: true })
+        .limit(100)
+
+      const msgs = data || []
+      setMessages(msgs)
+
+      const uniqueIds = [...new Set(msgs.map(m => m.user_id))]
+      if (uniqueIds.length > 0) {
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('id, nickname, avatar_url')
+          .in('id', uniqueIds)
+        if (profileData) {
+          const map = {}
+          profileData.forEach(p => { map[p.id] = p })
+          profilesRef.current = map
+          setProfilesVersion(v => v + 1)
+        }
+      }
+      setLoading(false)
+    }
+
+    init()
 
     const channel = supabase
       .channel(`party-chat-${team.id}`)
@@ -47,8 +61,10 @@ export default function PartyChat({ team, user }) {
         schema: 'public',
         table: 'team_messages',
         filter: `team_id=eq.${team.id}`
-      }, () => {
-        fetchMessages()
+      }, async (payload) => {
+        const msg = payload.new
+        setMessages(prev => [...prev, msg])
+        await ensureProfile(msg.user_id)
       })
       .subscribe()
 
@@ -69,6 +85,8 @@ export default function PartyChat({ team, user }) {
 
     if (!error) setNewMessage('')
   }
+
+  const profiles = profilesRef.current
 
   return (
     <div className="party-chat">
