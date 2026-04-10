@@ -20,7 +20,6 @@ import FloatingStream from './components/FloatingStream'
 import { ToastProvider } from './components/Toast'
 import { supabase } from './lib/supabase'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { Analytics } from '@vercel/analytics/react'
 
 export default function App() {
   const [user, setUser] = useState(null)
@@ -124,7 +123,6 @@ export default function App() {
       </Routes>
       {/* Change channel to official channel, this is just a elite dangerous streamer :P */}
       <FloatingStream channel="roots_rat" isActive={true} />
-      <Analytics />
     </ToastProvider>
   )
 }
