@@ -37,13 +37,19 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
   const [myManagedTeams, setMyManagedTeams] = useState([])
   const [mode, setMode] = useState('new')
   const [selectedTeamId, setSelectedTeamId] = useState('')
+  const [teamSizeError, setTeamSizeError] = useState('')
 
   React.useEffect(() => {
     const fetchMyTeams = async () => {
       try {
         const teams = await api.get('/ggwp/teams/mine')
         if (!Array.isArray(teams)) return
-        const led = teams.filter(t => t.leader_id === user.id)
+        const led = teams
+          .filter(t => t.leader_id === user.id)
+          .map(t => ({
+            ...t,
+            member_count: (t.members || []).filter(m => m.status === 'accepted').length || 1,
+          }))
         if (led.length > 0) {
           setMyManagedTeams(led)
           setMode('existing')
@@ -67,9 +73,19 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
       discord_id: team.discord_id || '',
       game_rank: team.game_rank || '',
     }))
+    const limit = tournament?.team_size || 5
+    if ((team.member_count || 1) > limit) {
+      setTeamSizeError(`Ta drużyna ma ${team.member_count} graczy, a turniej pozwala na max ${limit}. Usuń członków przed dołączeniem.`)
+    } else {
+      setTeamSizeError('')
+    }
   }
 
   const nextStep = () => {
+    if (step === 1 && mode === 'existing' && teamSizeError) {
+      setError(teamSizeError)
+      return
+    }
     if (step === 1 && (!formData.team_name.trim() || !formData.tag.trim())) {
       setError('Nazwa drużyny i Tag są wymagane!')
       return
@@ -193,9 +209,14 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
                     }}
                   >
                     {myManagedTeams.map(t => (
-                      <option key={t.id} value={t.id}>{t.team_name} [{t.tag}]</option>
+                      <option key={t.id} value={t.id}>{t.team_name} [{t.tag}] — {t.member_count} os.</option>
                     ))}
                   </select>
+                  {teamSizeError && (
+                    <p style={{ color: 'var(--gh-danger, #f87171)', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                      ⚠️ {teamSizeError}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <>
