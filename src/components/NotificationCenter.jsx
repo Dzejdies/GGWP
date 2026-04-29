@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import { useToast } from './Toast'
 import './NotificationCenter.css'
 import NotificationRedirect from './notificationRedirect'
@@ -10,36 +10,19 @@ export default function NotificationCenter({ user, onNavigate }) {
   const [unreadCount, setUnreadCount] = useState(0)
   const menuRef = useRef(null)
   const { showToast } = useToast()
+  const prevIdsRef = useRef(new Set())
 
   useEffect(() => {
     if (!user) return
 
     fetchNotifications()
 
-    // Realtime subscription
-    const channel = supabase
-      .channel('schema-db-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'notifications',
-          filter: `user_id=eq.${user.id}`
-        },
-        (payload) => {
-          setNotifications(prev => [payload.new, ...prev])
-          setUnreadCount(prev => prev + 1)
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return
+      fetchNotificationsQuiet()
+    }, 30000)
 
-          // Show toast for new notification
-          showToast(payload.new.title)
-        }
-      )
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    return () => clearInterval(interval)
   }, [user])
 
   useEffect(() => {
@@ -53,29 +36,42 @@ export default function NotificationCenter({ user, onNavigate }) {
   }, [])
 
   const fetchNotifications = async () => {
-    const { data, error } = await supabase
-      .from('notifications')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(20)
-
-    if (!error) {
+    try {
+      const data = await api.get('/ggwp/notifications')
+      if (!Array.isArray(data)) return
       setNotifications(data)
       setUnreadCount(data.filter(n => !n.is_read).length)
+      prevIdsRef.current = new Set(data.map(n => n.id))
+    } catch {
+      // silently ignore
+    }
+  }
+
+  const fetchNotificationsQuiet = async () => {
+    try {
+      const data = await api.get('/ggwp/notifications')
+      if (!Array.isArray(data)) return
+
+      const newItems = data.filter(n => !prevIdsRef.current.has(n.id))
+      if (newItems.length > 0) {
+        newItems.forEach(n => showToast(n.title))
+      }
+
+      setNotifications(data)
+      setUnreadCount(data.filter(n => !n.is_read).length)
+      prevIdsRef.current = new Set(data.map(n => n.id))
+    } catch {
+      // silently ignore
     }
   }
 
   const markAllAsRead = async () => {
-    const { error } = await supabase
-      .from('notifications')
-      .update({ is_read: true })
-      .eq('user_id', user.id)
-      .eq('is_read', false)
-
-    if (!error) {
+    try {
+      await api.patch('/ggwp/notifications/read-all')
       setNotifications(prev => prev.map(n => ({ ...n, is_read: true })))
       setUnreadCount(0)
+    } catch {
+      // silently ignore
     }
   }
 
@@ -109,9 +105,11 @@ export default function NotificationCenter({ user, onNavigate }) {
               <p className="notif-empty">Brak powiadomień</p>
             ) : (
               notifications.map(n => (
-                <div key={n.id} className={`notif-item ${!n.is_read ? 'unread' : ''}`} onClick={() => {
-                  NotificationRedirect({ onNavigate, notification: n })
-                }}>
+                <div
+                  key={n.id}
+                  className={`notif-item ${!n.is_read ? 'unread' : ''}`}
+                  onClick={() => NotificationRedirect({ onNavigate, notification: n })}
+                >
                   <span className="notif-icon">{getIcon(n.type)}</span>
                   <div className="notif-content">
                     <p className="notif-title">{n.title}</p>

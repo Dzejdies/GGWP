@@ -392,7 +392,7 @@ function EnrollModal({ onClose, tournament, user }) {
 
   const handleEnroll = async () => {
     setStatus('loading')
-    
+
     if (!supabase) {
       setStatus('error')
       return
@@ -404,12 +404,12 @@ function EnrollModal({ onClose, tournament, user }) {
       .insert([
         { tournament_id: tournament.id, user_id: user.id }
       ])
-      
+
     if (error) {
       console.error('Enrollment error:', error)
       // We proceed to show success anyway for the sake of the UX demonstration if DB is unconfigured
     }
-    
+
     setStatus('success')
   }
 
@@ -430,13 +430,13 @@ function EnrollModal({ onClose, tournament, user }) {
         ) : (
           <div className="modal__form">
             <p style={{ color: 'var(--gh-title-c)', marginBottom: '1.5rem', lineHeight: '1.5', fontSize: '1rem' }}>
-              Czy na pewno chcesz dołączyć do turnieju <strong style={{color: 'var(--gh-purple-lt)'}}>{tournament.title}</strong> jako <strong style={{color: 'var(--gh-cyan)'}}>{user?.user_metadata?.nickname || user?.email}</strong>?
+              Czy na pewno chcesz dołączyć do turnieju <strong style={{ color: 'var(--gh-purple-lt)' }}>{tournament.title}</strong> jako <strong style={{ color: 'var(--gh-cyan)' }}>{user?.user_metadata?.nickname || user?.email}</strong>?
             </p>
-            
+
             {status === 'error' && (
               <p className="modal__error">❌ Coś poszło nie tak. Spróbuj ponownie.</p>
             )}
-            
+
             <button
               className="gh-btn"
               onClick={handleEnroll}
@@ -482,7 +482,7 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
 
   useEffect(() => {
     let mounted = true
-    
+
     // Safety fallback timeout (3s)
     const timeout = setTimeout(() => {
       if (mounted && isLoading) {
@@ -502,7 +502,7 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
           .from('stats')
           .select('value, label, sort_order')
           .order('sort_order')
-        
+
         if (mounted && sData && sData.length > 0) {
           setStats(sData)
         } else if (mounted) {
@@ -527,7 +527,7 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
             prize_pool: t.prize_pool,
             participants_count: t.teams?.[0]?.count || 0
           }))
-          
+
           if (mappedData.length > 0) {
             // Filtrujemy do nowej polityki widoku
             const upcoming = mappedData.filter(t => t.status === 'upcoming' || t.status === 'live').slice(0, 2);
@@ -575,9 +575,9 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
         />
       )}
       {showEnrollModal && (
-        <EnrollModal 
-          onClose={() => { setShowEnrollModal(false); setSelectedTournament(null); }} 
-          tournament={selectedTournament} 
+        <EnrollModal
+          onClose={() => { setShowEnrollModal(false); setSelectedTournament(null); }}
+          tournament={selectedTournament}
           user={user}
         />
       )}
@@ -681,8 +681,8 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
                 Najbliższe nadchodzące i ostatnie wydarzenia e-sportowe
               </p>
             </div>
-            <button 
-              className="gh-btn gh-btn--outline" 
+            <button
+              className="gh-btn gh-btn--outline"
               onClick={() => onNavigate('tournaments-list')}
             >
               Zobacz Wszystkie ➔
@@ -699,39 +699,39 @@ export default function ProjectPage({ onNavigate, user, onAuthChange }) {
             <div className="project-grid project-grid--3">
               {tournaments.map((t) => (
                 <div key={t.id} className={`tournament-card tournament-card--${t.status}`}>
-                <div className="tournament-card__header">
-                  <span className={`tournament-card__badge tournament-card__badge--${t.status}`}>
-                    {STATUS_LABELS[t.status] || t.status}
-                  </span>
-                  <span className="tournament-card__game">{t.game}</span>
-                </div>
-                <h3 className="tournament-card__title">{t.title}</h3>
-                <p className="tournament-card__desc">{t.description}</p>
-                <div className="tournament-card__meta">
-                  <div className="tournament-card__meta-item">
-                    <span className="tournament-card__meta-label">📅 Data</span>
-                    <span className="tournament-card__meta-value">
-                      {new Date(t.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                  <div className="tournament-card__header">
+                    <span className={`tournament-card__badge tournament-card__badge--${t.status}`}>
+                      {STATUS_LABELS[t.status] || t.status}
                     </span>
+                    <span className="tournament-card__game">{t.game}</span>
                   </div>
-                  {t.prize_pool && (
+                  <h3 className="tournament-card__title">{t.title}</h3>
+                  <p className="tournament-card__desc">{t.description}</p>
+                  <div className="tournament-card__meta">
                     <div className="tournament-card__meta-item">
-                      <span className="tournament-card__meta-label">💰 Pula</span>
-                      <span className="tournament-card__meta-value">{t.prize_pool}</span>
+                      <span className="tournament-card__meta-label">📅 Data</span>
+                      <span className="tournament-card__meta-value">
+                        {new Date(t.date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })}
+                      </span>
                     </div>
-                  )}
-                  <div className="tournament-card__meta-item">
-                    <span className="tournament-card__meta-label">👥 Uczestnicy</span>
-                    <span className="tournament-card__meta-value">
-                      {t.participants_count}{t.max_participants ? ` / ${t.max_participants}` : ''}
-                    </span>
+                    {t.prize_pool && (
+                      <div className="tournament-card__meta-item">
+                        <span className="tournament-card__meta-label">💰 Pula</span>
+                        <span className="tournament-card__meta-value">{t.prize_pool}</span>
+                      </div>
+                    )}
+                    <div className="tournament-card__meta-item">
+                      <span className="tournament-card__meta-label">👥 Uczestnicy</span>
+                      <span className="tournament-card__meta-value">
+                        {t.participants_count}{t.max_participants ? ` / ${t.max_participants}` : ''}
+                      </span>
+                    </div>
                   </div>
-                </div>
                   <button className="tournament-card__btn" onClick={() => onNavigate('tournament-details', t.id)}>
                     🔍 Zobacz szczegóły
                   </button>
-              </div>
-            ))}
+                </div>
+              ))}
             </div>
           ) : (
             <div className="gh-empty-state">

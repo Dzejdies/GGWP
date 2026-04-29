@@ -1,7 +1,9 @@
 import { useState } from 'react'
-import { supabase } from '../lib/supabase'
+import { setAccessToken } from '../lib/api'
 import './LoginModal.css'
 import './button.css'
+
+const BASE_URL = import.meta.env.VITE_API_URL
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_REGEX = /^[\d\s\-]{4,}$/
@@ -29,7 +31,6 @@ export default function LoginModal({ onClose, onSuccess, initialMode = 'login' }
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
-  const [resetSent, setResetSent] = useState(false)
 
   // --- Stan rejestracji ---
   const [regForm, setRegForm] = useState({
@@ -54,53 +55,36 @@ export default function LoginModal({ onClose, onSuccess, initialMode = 'login' }
   const handleLogin = async (e) => {
     e.preventDefault()
     if (!loginEmail || !loginPassword) { setLoginError('Uzupełnij wszystkie pola'); return }
-    if (!supabase) { setLoginError('Brak połączenia z bazą'); return }
 
     setLoginLoading(true)
     setLoginError('')
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: loginEmail,
-      password: loginPassword,
-    })
-
-    if (error) {
-      if (error.message.includes('Invalid login credentials')) {
-        setLoginError('Nieprawidłowy e-mail lub hasło')
-      } else if (error.message.includes('Email not confirmed')) {
-        setLoginError('Potwierdź swój e-mail przed zalogowaniem')
-      } else {
-        setLoginError('Coś poszło nie tak. Spróbuj ponownie.')
+    try {
+      const res = await fetch(`${BASE_URL}/ggwp/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        if (res.status === 429) {
+          setLoginError('Zbyt wiele prób. Spróbuj ponownie za 15 minut.')
+        } else if (res.status === 423) {
+          setLoginError(data?.error || 'Konto tymczasowo zablokowane.')
+        } else {
+          setLoginError('Nieprawidłowy e-mail lub hasło')
+        }
+        return
       }
-      setLoginLoading(false)
-    } else {
-      onSuccess(data.session)
+      setAccessToken(data.accessToken)
+      onSuccess(data.user)
       onClose()
+    } catch {
+      setLoginError('Błąd połączenia. Spróbuj ponownie.')
+    } finally {
+      setLoginLoading(false)
     }
-  }
-
-  const handleResetPassword = async (e) => {
-    e.preventDefault()
-    if (!loginEmail) { setLoginError('Podaj adres e-mail'); return }
-    if (!supabase) { setLoginError('Brak połączenia z bazą'); return }
-
-    setLoginLoading(true)
-    setLoginError('')
-
-    const { error } = await supabase.auth.resetPasswordForEmail(loginEmail, {
-      redirectTo: window.location.origin + '/#reset-password',
-    })
-
-    if (error) {
-      if (error.message.includes('rate limit')) {
-        setLoginError('Zbyt wiele prób. Spróbuj ponownie za chwilę.')
-      } else {
-        setLoginError('Coś poszło nie tak. Spróbuj ponownie.')
-      }
-    } else {
-      setResetSent(true)
-    }
-    setLoginLoading(false)
   }
 
   // ───── Rejestracja ─────
@@ -165,33 +149,37 @@ export default function LoginModal({ onClose, onSuccess, initialMode = 'login' }
     if (isCustomDial && !/^\+\d{1,4}$/.test(customDialCode.trim())) { setCustomDialError('Format: +XX lub +XXX (np. +351)'); return }
     if (!PASSWORD_REGEX.test(regForm.password)) { setPasswordError('Hasło musi zawierać co najmniej 8 znaków, w tym jedną małą i dużą literę oraz cyfrę'); return }
     if (regForm.password !== regForm.password_confirm) { setPasswordConfirmError('Hasła się nie zgadzają'); return }
-    if (!supabase) { setRegStatus('error'); return }
 
     setRegStatus('loading')
     const fullPhone = `${effectiveDialCode} ${regForm.phone.trim()}`
 
-    const { error } = await supabase.auth.signUp({
-      email: regForm.email,
-      password: regForm.password,
-      options: {
-        data: {
-          display_name: regForm.nickname,
+    try {
+      const res = await fetch(`${BASE_URL}/ggwp/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: regForm.email,
+          password: regForm.password,
           nickname: regForm.nickname,
           phone: fullPhone,
-        },
-        emailRedirectTo: window.location.origin + '/#confirmed',
-      },
-    })
-
-    if (error) {
-      if (error.message.includes('already registered')) {
-        setEmailError('Ten e-mail jest już zarejestrowany')
-      } else {
-        setRegError('Coś poszło nie tak. Spróbuj ponownie.')
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        if (res.status === 429) {
+          setRegError('Zbyt wiele prób rejestracji. Spróbuj ponownie za godzinę.')
+        } else if (res.status === 422) {
+          setRegError(data?.error || 'Nieprawidłowe dane. Sprawdź formularz.')
+        } else {
+          setRegError('Coś poszło nie tak. Spróbuj ponownie.')
+        }
+        setRegStatus('error')
+        return
       }
-      setRegStatus('error')
-    } else {
       setRegStatus('success')
+    } catch {
+      setRegError('Błąd połączenia. Spróbuj ponownie.')
+      setRegStatus('error')
     }
   }
 
@@ -248,14 +236,6 @@ export default function LoginModal({ onClose, onSuccess, initialMode = 'login' }
               autoComplete="current-password"
             />
 
-            <button
-              type="button"
-              className="login-modal__forgot"
-              onClick={() => { setMode('reset'); setLoginError(''); setResetSent(false) }}
-            >
-              Zapomniałeś hasła?
-            </button>
-
             {loginError && <p className="modal__error">❌ {loginError}</p>}
 
             <button className="gh-btn login-modal__submit" type="submit" disabled={loginLoading}>
@@ -264,59 +244,12 @@ export default function LoginModal({ onClose, onSuccess, initialMode = 'login' }
           </form>
         )}
 
-        {/* ── Reset hasła ── */}
-        {mode === 'reset' && (
-          <>
-            <h2 className="modal__title">🔑 Resetuj hasło</h2>
-            {resetSent ? (
-              <div className="modal__success">
-                <span className="modal__success-icon">📧</span>
-                <p>Link do resetu hasła został wysłany na <strong>{loginEmail}</strong></p>
-                <p style={{ fontSize: '0.8rem', color: 'var(--gh-muted)', marginTop: '0.5rem' }}>
-                  Sprawdź skrzynkę (również spam). Link wygasa po godzinie.
-                </p>
-                <button className="gh-btn" onClick={onClose}>Zamknij</button>
-              </div>
-            ) : (
-              <form className="modal__form" onSubmit={handleResetPassword}>
-                <p style={{ fontSize: '0.875rem', color: 'var(--gh-muted)', marginBottom: '0.5rem' }}>
-                  Podaj adres e-mail przypisany do konta. Wyślemy Ci link do zresetowania hasła.
-                </p>
-                <label className="modal__label">E-mail</label>
-                <input
-                  className="modal__input"
-                  type="email"
-                  value={loginEmail}
-                  onChange={(e) => { setLoginEmail(e.target.value); setLoginError('') }}
-                  placeholder="twoj@email.pl"
-                  required
-                  autoComplete="email"
-                />
-
-                {loginError && <p className="modal__error">❌ {loginError}</p>}
-
-                <button className="gh-btn login-modal__submit" type="submit" disabled={loginLoading}>
-                  {loginLoading ? 'Wysyłanie…' : '📧 Wyślij link'}
-                </button>
-
-                <button
-                  type="button"
-                  className="login-modal__forgot"
-                  onClick={() => { setMode('login'); setLoginError('') }}
-                >
-                  ← Powrót do logowania
-                </button>
-              </form>
-            )}
-          </>
-        )}
-
         {/* ── Rejestracja ── */}
         {mode === 'register' && (
           regStatus === 'success' ? (
             <div className="modal__success">
               <span className="modal__success-icon">✅</span>
-              <p>Konto zostało utworzone! Sprawdź skrzynkę pocztową, aby potwierdzić e-mail i dokończyć rejestrację.</p>
+              <p>Konto zostało utworzone! Możesz się teraz zalogować.</p>
               <button className="gh-btn" onClick={onClose}>Zamknij</button>
             </div>
           ) : (

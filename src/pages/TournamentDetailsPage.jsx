@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import './TournamentDetailsPage.css'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import WizardRegistrationModal from '../components/WizardRegistrationModal'
 import LoginModal from '../components/LoginModal'
 import { useParams } from 'react-router-dom'
@@ -11,36 +11,27 @@ import { useAuthGuard } from '../hooks/useAuthGuard.jsx'
 
 export default function TournamentDetailsPage({ tournamentId: propsTournamentId, onNavigate, user, onAuthChange }) {
   const { id } = useParams()
-  const tournamentId = id || propsTournamentId;
+  const tournamentId = id || propsTournamentId
 
   const { requireAuth, AuthModal } = useAuthGuard(user, onAuthChange)
 
-  // Auth gate — blokada strony dla niezalogowanych
   const [showPageAuthGate, setShowPageAuthGate] = useState(!user)
   useEffect(() => {
     if (user) setShowPageAuthGate(false)
   }, [user])
 
-  // Stan turnieju
   const [tournament, setTournament] = useState(null)
   const [teams, setTeams] = useState([])
-  const [myTeam, setMyTeam] = useState(null) // Twoja drużyna
+  const [myTeam, setMyTeam] = useState(null)
   const [isLeader, setIsLeader] = useState(false)
-  const [pendingRequests, setPendingRequests] = useState([]) // Prośby do mojej drużyny
+  const [pendingRequests, setPendingRequests] = useState([])
   const [loading, setLoading] = useState(true)
 
-  // Okienka (Modals)
   const [showCreateTeam, setShowCreateTeam] = useState(false)
 
   useEffect(() => {
     async function fetchData() {
-      if (!supabase) {
-        setLoading(false)
-        return
-      }
-
       if (!tournamentId) {
-        // Fallback dla debugowania bez ID
         setTournament({
           id: '1', title: 'GG WP Charity Cup #1', game: 'League of Legends', date: 'Brak',
           status: 'upcoming', description: 'Wybierz turniej z listy aby zobaczyć szczegóły.'
@@ -50,56 +41,51 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
       }
 
       try {
-        const { data: tourData, error: tourError } = await supabase
-          .from('tournaments')
-          .select('*')
-          .eq('id', tournamentId)
-          .single()
-
-        if (tourError || !tourData) throw tourError
+        const tourData = await api.get(`/ggwp/tournaments/${tournamentId}`)
+        if (!tourData?.id) throw new Error('Tournament not found')
 
         setTournament({
           id: tourData.id,
           title: tourData.name,
           game: tourData.game,
-          date: tourData.start_date ? new Date(tourData.start_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Brak daty',
+          date: tourData.start_date
+            ? new Date(tourData.start_date).toLocaleDateString('pl-PL', { day: 'numeric', month: 'long', year: 'numeric' })
+            : 'Brak daty',
           prize_pool: tourData.prize_pool || 'Brak',
-          status: tourData.status === 'open' ? 'upcoming' : (tourData.status === 'ongoing' ? 'live' : tourData.status === 'finished' ? 'completed' : tourData.status),
+          status: tourData.status === 'open' ? 'upcoming'
+            : (tourData.status === 'ongoing' ? 'live'
+              : tourData.status === 'finished' ? 'completed' : tourData.status),
           max_participants: tourData.max_teams || 0,
           team_size: tourData.team_size || 5,
           description: tourData.description || 'Brak opisu.',
           rules: tourData.rules || 'Zasady dołączania do turnieju uzupełnione zostaną przez administrację.'
         })
 
-        const { data: teamsData, error: teamsError } = await supabase
-          .from('teams')
-          .select('id, team_name, tag, leader_id, avatar_url, team_members(id, status)')
-          .eq('tournament_id', tournamentId)
-
-        if (!teamsError && teamsData) {
+        const teamsData = await api.get(`/ggwp/teams?tournament_id=${tournamentId}`)
+        if (Array.isArray(teamsData)) {
           const mappedTeams = teamsData.map(t => ({
             id: t.id,
             team_name: t.team_name,
             tag: t.tag,
             leader_id: t.leader_id,
             avatar_url: t.avatar_url,
-            member_count: t.team_members ? t.team_members.filter(m => m.status === 'accepted').length : 1
+            member_count: t.members_count ?? 0,
           }))
           setTeams(mappedTeams)
 
           if (user) {
+            // Find my team — first by leader, then by membership via /teams/mine
             let myT = mappedTeams.find(t => t.leader_id === user.id)
-            let leader = !!myT;
+            let leader = !!myT
 
             if (!myT) {
-              const { data: memberData } = await supabase
-                .from('team_members')
-                .select('team_id, status')
-                .eq('user_id', user.id)
-                .eq('status', 'accepted');
-
-              if (memberData && memberData.length > 0) {
-                myT = mappedTeams.find(t => memberData.some(m => m.team_id === t.id));
+              try {
+                const myTeams = await api.get('/ggwp/teams/mine')
+                if (Array.isArray(myTeams)) {
+                  myT = mappedTeams.find(t => myTeams.some(mt => mt.id === t.id))
+                }
+              } catch {
+                // ignore
               }
             }
 
@@ -108,22 +94,20 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
               setIsLeader(leader)
 
               if (leader) {
-                const { data: reqData } = await supabase
-                  .from('team_members')
-                  .select('id, user_id, status')
-                  .eq('team_id', myT.id)
-                  .eq('status', 'pending')
-
-                if (reqData) {
-                  setPendingRequests(reqData.map(r => ({
+                // Pending requests = team_members with status='pending' for my team
+                try {
+                  const teamDetail = await api.get(`/ggwp/teams/${myT.id}`)
+                  const pending = (teamDetail.members || []).filter(m => m.status === 'pending')
+                  setPendingRequests(pending.map(r => ({
                     id: r.id,
                     user_id: r.user_id,
-                    user_name: 'Nowa prośba (ID: ' + r.user_id.split('-')[0] + '...)',
-                    status: r.status
+                    user_name: r.nickname || `Gracz (${r.user_id.split('-')[0]}...)`,
+                    status: r.status,
                   })))
+                } catch {
+                  // ignore
                 }
               }
-
             }
           }
         }
@@ -141,9 +125,10 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
     const completeTeamInfo = {
       id: newTeamData.id,
       team_name: newTeamData.team_name,
+      tag: newTeamData.tag,
       leader_id: newTeamData.leader_id,
       member_count: 1,
-      avatar_url: newTeamData.avatar_url
+      avatar_url: newTeamData.avatar_url,
     }
     setTeams([...teams, completeTeamInfo])
     setMyTeam(completeTeamInfo)
@@ -154,39 +139,25 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
   const handleJoinTeam = (teamId) => {
     requireAuth(async () => {
       try {
-        const { error } = await supabase
-          .from('team_members')
-          .insert({ team_id: teamId, user_id: user.id, status: 'pending' })
-
-        if (error) throw error
-
+        await api.post('/ggwp/team-members', { team_id: teamId, user_id: user.id })
         alert('Wysłano prośbę do lidera drużyny! Oczekuj na akceptację.')
-      } catch (err) {
-        alert('Błąd podczas wysyłania prośby: ' + err.message)
+      } catch {
+        alert('Błąd podczas wysyłania prośby. Możliwe że jesteś już zaproszony lub należysz do drużyny.')
       }
     })
   }
 
-  const handleLeaderAction = async (reqId, action) => {
-    // action: 'accepted' | 'rejected'
+  const handleLeaderAction = async (memberId, action) => {
     try {
       if (action === 'rejected') {
-        const { error } = await supabase.from('team_members').delete().eq('id', reqId);
-        if (error) throw error;
+        await api.patch(`/ggwp/team-members/${memberId}/reject`)
       } else {
-        const { error } = await supabase.from('team_members').update({ status: 'accepted' }).eq('id', reqId);
-        if (error) throw error;
+        await api.patch(`/ggwp/team-members/${memberId}/accept`)
       }
-
-      setPendingRequests(prev => prev.filter(req => req.id !== reqId))
-
-      if (action === 'accepted') {
-        alert('Użytkownik został dodany do drużyny!')
-      } else {
-        alert('Odrzuciłeś prośbę użytkownika.')
-      }
-    } catch (err) {
-      alert('Wystąpił błąd podczas zmiany statusu: ' + err.message);
+      setPendingRequests(prev => prev.filter(req => req.id !== memberId))
+      alert(action === 'accepted' ? 'Użytkownik został dodany do drużyny!' : 'Odrzuciłeś prośbę użytkownika.')
+    } catch {
+      alert('Wystąpił błąd podczas zmiany statusu.')
     }
   }
 
@@ -196,22 +167,19 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
     <div className="gh-page">
       <Navbar onNavigate={onNavigate} currentView="project" user={user} onAuthChange={onAuthChange} />
 
-      {/* Auth gate — blokada dla niezalogowanych */}
       {showPageAuthGate && (
         <LoginModal
           initialMode="register"
           onClose={() => onNavigate('project')}
-          onSuccess={(session) => {
-            onAuthChange(session.user)
+          onSuccess={(loggedUser) => {
+            onAuthChange(loggedUser)
             setShowPageAuthGate(false)
           }}
         />
       )}
 
-      {/* Modal inline guard (dla akcji w środku strony) */}
       {AuthModal}
 
-      {/* Modal tworzenia drużyny */}
       {showCreateTeam && (
         <WizardRegistrationModal
           tournament={tournament}
@@ -238,10 +206,8 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
         </section>
 
         <div className="td-content-grid">
-          {/* Główna sekcja */}
           <div className="td-main-content">
 
-            {/* Panel Drużyny */}
             {myTeam && (
               <section className="td-section td-team-panel">
                 <h2 className="td-section__title" style={{ color: 'var(--gh-cyan)' }}>🛡️ Twoja Drużyna: {myTeam.team_name}</h2>
@@ -271,8 +237,8 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
               <h2 className="td-section__title">Zgłoszone drużyny</h2>
               {teams.length === 0 ? <p>Brak drużyn. Bądź pierwszy!</p> : (
                 teams.map(t => {
-                  const limit = tournament?.team_size || 5;
-                  const isFull = t.member_count >= limit;
+                  const limit = tournament?.team_size || 5
+                  const isFull = t.member_count >= limit
 
                   return (
                     <div key={t.id} className="td-team-card" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -300,7 +266,6 @@ export default function TournamentDetailsPage({ tournamentId: propsTournamentId,
             </section>
           </div>
 
-          {/* Sidebar */}
           <div className="td-sidebar">
             <section className="td-section">
               <h2 className="td-section__title">Szczegóły</h2>

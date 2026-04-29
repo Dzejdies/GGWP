@@ -18,7 +18,7 @@ import AboutPage from './pages/AboutPage'
 import LiveStreamPage from './pages/liveStreamPage'
 import FloatingStream from './components/FloatingStream'
 import { ToastProvider } from './components/Toast'
-import { supabase } from './lib/supabase'
+import api, { getAccessToken, clearAccessToken } from './lib/api'
 import { Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 
 export default function App() {
@@ -46,31 +46,12 @@ export default function App() {
 
   // Autoryzacja i trzymanie sesji
   useEffect(() => {
-    if (!supabase) return
-
-    // Restore session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user)
-      }
+    if (!getAccessToken()) return
+    api.get('/ggwp/auth/me').then(data => {
+      if (data?.id) setUser(data)
+    }).catch(() => {
+      clearAccessToken()
     })
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN') {
-        setUser(session?.user ?? null)
-        if (window.location.hash.includes('access_token')) {
-          routerNavigate('/confirmed')
-          window.history.replaceState(null, '', window.location.pathname)
-        } else if (location.pathname === '/' || location.pathname === '/landing') {
-          routerNavigate('/dashboard')
-        }
-      } else if (event === 'SIGNED_OUT') {
-        setUser(null)
-        //routerNavigate('/')
-      }
-    })
-
-    return () => subscription.unsubscribe()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleAuthChange = (newUser) => setUser(newUser)

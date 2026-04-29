@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import ThemeToggle from '../themeToggle'
 import LoginModal from './LoginModal'
-import { supabase } from '../lib/supabase'
+import api, { clearAccessToken } from '../lib/api'
 import NotificationCenter from './NotificationCenter'
 import './Navbar.css'
 import './LoginModal.css'
@@ -25,16 +25,20 @@ export default function Navbar({ onNavigate, currentView, user, onAuthChange, in
     }
 
     const handleLogout = async () => {
-        if (!supabase) return
-        await supabase.auth.signOut()
+        try {
+            await api.post('/ggwp/auth/logout')
+        } catch {
+            // ignore — proceed with local logout
+        }
+        clearAccessToken()
         if (onAuthChange) onAuthChange(null)
         setOpen(false)
     }
 
-    const nickname = user?.user_metadata?.nickname || user?.user_metadata?.display_name || user?.email?.split('@')[0] || '?'
+    const nickname = user?.nickname || user?.email?.split('@')[0] || '?'
     const initials = nickname.slice(0, 2).toUpperCase()
-    const avatarUrl = user?.user_metadata?.avatar_url
-    const isAdmin = user?.app_metadata?.role === 'admin'
+    const avatarUrl = user?.avatar_url
+    const isAdmin = !!user?.is_admin
 
     return (
         <>
@@ -71,8 +75,8 @@ export default function Navbar({ onNavigate, currentView, user, onAuthChange, in
             {showLogin && (
                 <LoginModal
                     onClose={() => setShowLogin(false)}
-                    onSuccess={(session) => {
-                        if (onAuthChange) onAuthChange(session.user)
+                    onSuccess={(loggedUser) => {
+                        if (onAuthChange) onAuthChange(loggedUser)
                     }}
                 />
             )}

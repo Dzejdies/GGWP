@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import api, { getAccessToken, clearAccessToken } from '../lib/api'
 import Navbar from '../components/Navbar'
 import Footer from '../components/Footer'
 import { useToast } from '../components/Toast'
@@ -7,6 +7,7 @@ import PartyChat from '../components/PartyChat'
 import './AccountPage.css'
 import '../components/button.css'
 
+const BASE_URL = import.meta.env.VITE_API_URL
 const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
 const PHONE_REGEX = /^[\d\s\-]{4,}$/
@@ -35,26 +36,25 @@ function parsePhone(fullPhone) {
 }
 
 export default function AccountPage({ onNavigate, user, onAuthChange, initialTabData }) {
-  const meta = user?.user_metadata || {}
-  const parsed = parsePhone(meta.phone)
-
-  // Profile state
-  const [nickname, setNickname] = useState(meta.nickname || meta.display_name || '')
-  const [dialCode, setDialCode] = useState(parsed.dialCode)
-  const [phone, setPhone] = useState(parsed.phone)
-  const [message, setMessage] = useState(meta.message || '')
-  const [profileStatus, setProfileStatus] = useState('idle')
-  const [profileError, setProfileError] = useState('')
+  const parsed = parsePhone(user?.phone)
   const { showToast } = useToast()
 
+  // Profile state
+  const [nickname, setNickname] = useState(user?.nickname || '')
+  const [dialCode, setDialCode] = useState(parsed.dialCode)
+  const [phone, setPhone] = useState(parsed.phone)
+  const [message, setMessage] = useState(user?.message || '')
+  const [profileStatus, setProfileStatus] = useState('idle')
+  const [profileError, setProfileError] = useState('')
 
   // Avatar state
-  const [avatarUrl, setAvatarUrl] = useState(meta.avatar_url || '')
+  const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '')
   const [avatarUploading, setAvatarUploading] = useState(false)
   const fileInputRef = useRef(null)
 
   // Email state
   const [newEmail, setNewEmail] = useState('')
+  const [emailPassword, setEmailPassword] = useState('')
   const [emailStatus, setEmailStatus] = useState('idle')
   const [emailError, setEmailError] = useState('')
 
@@ -70,7 +70,7 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [deleteStatus, setDeleteStatus] = useState('idle')
 
-  // ── INT-21: Teams State ──
+  // Teams state
   const activeTab = initialTabData?.tab || 'profile'
   const [myTeams, setMyTeams] = useState([])
   const [invites, setInvites] = useState([])
@@ -93,117 +93,76 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
   const fetchTeamsData = async () => {
     setTeamsLoading(true)
     try {
-      // 1. Fetch teams where I am a member (accepted)
-      const { data: teamsWithMembers, error: memberError } = await supabase
-        .from('teams')
-        .select(`
-          id, team_name, tag, avatar_url, leader_id,
-          team_members!inner (user_id, status),
-          members:team_members (
-            id, status, user_id,
-            profile:profiles (nickname, avatar_url)
-          )
-        `)
-        .eq('team_members.user_id', user.id)
-        .eq('team_members.status', 'accepted')
-
-      if (memberError) throw memberError
-      
-      setMyTeams(teamsWithMembers || [])
-
-      // 2. Fetch pending invitations for me
-      const { data: inviteData, error: inviteError } = await supabase
-        .from('team_members')
-        .select(`
-          id,
-          team:teams (
-            id, team_name, tag, avatar_url, leader_id
-          )
-        `)
-        .eq('user_id', user.id)
-        .eq('status', 'pending')
-
-      if (inviteError) throw inviteError
-      setInvites(inviteData || [])
-    } catch (err) {
-      console.error('Błąd pobierania drużyn:', err)
+      const [teams, inviteList] = await Promise.all([
+        api.get('/ggwp/teams/mine'),
+        api.get('/ggwp/team-members/invites'),
+      ])
+      setMyTeams(Array.isArray(teams) ? teams : [])
+      setInvites(Array.isArray(inviteList) ? inviteList : [])
+    } catch {
+      showToast('Błąd pobierania danych drużyn.', 'error')
     } finally {
       setTeamsLoading(false)
     }
   }
 
-  const handleSearchUsers = async () => {
-    if (searchQuery.length < 2) return
+  const handleSearchUsers = async (value) => {
+    if (value.length < 2) { setSearchResults([]); return }
     setSearching(true)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, nickname, avatar_url')
-      .ilike('nickname', `%${searchQuery}%`)
-      .limit(5)
-    
-    if (!error) setSearchResults(data)
-    setSearching(false)
+    try {
+      const data = await api.get(`/ggwp/users?search=${encodeURIComponent(value)}`)
+      setSearchResults(Array.isArray(data) ? data : [])
+    } catch {
+      setSearchResults([])
+    } finally {
+      setSearching(false)
+    }
   }
 
   const handleInvitePlayer = async (teamId, targetUserId) => {
-    const { error } = await supabase
-      .from('team_members')
-      .insert({
-        team_id: teamId,
-        user_id: targetUserId,
-        status: 'pending'
-      })
-    
-    if (error) {
-      showToast('Ten gracz jest już zaproszony lub należy do drużyny.', 'error')
-    } else {
+    try {
+      await api.post('/ggwp/team-members', { team_id: teamId, user_id: targetUserId })
       const targetTeam = myTeams.find(t => t.id === teamId)
-      // Notification for target user
-      await supabase.from('notifications').insert({
+      await api.post('/ggwp/notifications', {
         user_id: targetUserId,
         title: '📩 Nowe Zaproszenie',
         message: `Zostałeś zaproszony do drużyny ${targetTeam?.team_name || 'Nowej Drużyny'}.`,
-        type: 'team'
+        type: 'team',
       })
-
       showToast('Zaproszenie wysłane!')
       setSearchResults([])
       setSearchQuery('')
+    } catch {
+      showToast('Ten gracz jest już zaproszony lub należy do drużyny.', 'error')
     }
   }
 
-  const handleRespondInvite = async (inviteId, status) => {
-    const invite = invites.find(i => i.id === inviteId)
-
-    const { error } = await supabase
-      .from('team_members')
-      .update({ status })
-      .eq('id', inviteId)
-
-    if (!error) {
-      if (invite?.team?.leader_id) {
-        await supabase.from('notifications').insert({
-          user_id: invite.team.leader_id,
-          title: status === 'accepted' ? '✅ Zaproszenie Zaakceptowane' : '❌ Zaproszenie Odrzucone',
-          message: `Gracz ${nickname} ${status === 'accepted' ? 'dołączył do' : 'odrzucił zaproszenie do'} drużyny ${invite.team.team_name}.`,
-          type: 'team'
+  const handleRespondInvite = async (invite, action) => {
+    try {
+      await api.patch(`/ggwp/team-members/${invite.id}/${action}`)
+      if (invite.leader_id) {
+        await api.post('/ggwp/notifications', {
+          user_id: invite.leader_id,
+          title: action === 'accept' ? '✅ Zaproszenie Zaakceptowane' : '❌ Zaproszenie Odrzucone',
+          message: `Gracz ${user.nickname} ${action === 'accept' ? 'dołączył do' : 'odrzucił zaproszenie do'} drużyny ${invite.team_name}.`,
+          type: 'team',
         })
       }
-      showToast(status === 'accepted' ? 'Dołączyłeś do drużyny!' : 'Zaproszenie odrzucone.')
+      showToast(action === 'accept' ? 'Dołączyłeś do drużyny!' : 'Zaproszenie odrzucone.')
       fetchTeamsData()
+    } catch {
+      showToast('Błąd podczas odpowiedzi na zaproszenie.', 'error')
     }
   }
 
-
-  const handleKickMember = async (teamId, targetUserId) => {
+  const handleKickMember = async (memberId) => {
     if (!confirm('Czy na pewno chcesz usunąć tego członka?')) return
-    const { error } = await supabase
-      .from('team_members')
-      .delete()
-      .eq('team_id', teamId)
-      .eq('user_id', targetUserId)
-    
-    if (!error) fetchTeamsData()
+    try {
+      await api.delete(`/ggwp/team-members/${memberId}`)
+      fetchTeamsData()
+    } catch {
+      showToast('Błąd przy usuwaniu członka.', 'error')
+    }
   }
 
   const handleLeaveTeam = async (teamId) => {
@@ -211,83 +170,207 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
     if (!targetTeam) return
 
     const isLeader = targetTeam.leader_id === user.id
-    const promptMsg = isLeader 
+    const myMember = targetTeam.members?.find(m => m.user_id === user.id && m.status === 'accepted')
+    if (!myMember) return
+
+    const promptMsg = isLeader
       ? 'Jesteś liderem tej drużyny. Jeśli ją opuścisz, dowodzenie zostanie przekazane losowemu członkowi. Kontynuować?'
       : 'Czy na pewno chcesz opuścić drużynę?'
-
     if (!confirm(promptMsg)) return
 
     try {
       if (isLeader) {
         const others = targetTeam.members.filter(m => m.user_id !== user.id && m.status === 'accepted')
-        
         if (others.length > 0) {
-          const newBoss = others[Math.floor(Math.random() * others.length)]
-          
-          await supabase
-            .from('teams')
-            .update({ leader_id: newBoss.user_id })
-            .eq('id', teamId)
-
-          // Persistent Notification for new leader
-          await supabase.from('notifications').insert({
-            user_id: newBoss.user_id,
+          const newLeader = others[Math.floor(Math.random() * others.length)]
+          await api.patch(`/ggwp/teams/${teamId}`, { leader_id: newLeader.user_id })
+          await api.post('/ggwp/notifications', {
+            user_id: newLeader.user_id,
             title: '👑 Zostałeś Liderem!',
-            message: `Gracz ${nickname} opuścił drużynę ${targetTeam.team_name}. Dowodzenie przekazano Tobie.`,
-            type: 'team'
+            message: `Gracz ${user.nickname} opuścił drużynę ${targetTeam.team_name}. Dowodzenie przekazano Tobie.`,
+            type: 'team',
           })
-          
-          showToast(`Przekazałeś dowodzenie graczowi ${newBoss.profile?.nickname}`)
+          showToast(`Przekazałeś dowodzenie graczowi ${newLeader.nickname}`)
         } else {
-          // No one left - delete team
-          await supabase.from('teams').delete().eq('id', teamId)
-          showToast('Wszyscy opuścili drużunę. Zespół został rozwiązany.')
+          await api.delete(`/ggwp/teams/${teamId}`)
+          showToast('Wszyscy opuścili drużynę. Zespół został rozwiązany.')
+          fetchTeamsData()
+          return
         }
       }
 
-      const { error } = await supabase
-        .from('team_members')
-        .delete()
-        .eq('team_id', teamId)
-        .eq('user_id', user.id)
-      
-      if (!error) {
-        showToast('Opuściłeś drużynę.')
-        fetchTeamsData()
-      }
-    } catch (err) {
+      await api.delete(`/ggwp/team-members/${myMember.id}`)
+      showToast('Opuściłeś drużynę.')
+      fetchTeamsData()
+    } catch {
       showToast('Wystąpił błąd przy opuszczaniu drużyny.', 'error')
     }
   }
 
-
   const handleCreateTeam = async () => {
     if (!newTeamName || !newTeamTag) return
-    const { data: team, error: tErr } = await supabase
-      .from('teams')
-      .insert({
+    try {
+      await api.post('/ggwp/teams', {
         team_name: newTeamName,
         tag: newTeamTag.toUpperCase(),
-        leader_id: user.id
       })
-      .select()
-      .single()
-    
-    if (tErr) {
-      showToast('Błąd tworzenia drużyny: ' + tErr.message, 'error')
+      setNewTeamName('')
+      setNewTeamTag('')
+      fetchTeamsData()
+    } catch {
+      showToast('Błąd tworzenia drużyny.', 'error')
+    }
+  }
+
+  // ── Avatar upload ──
+  const handleAvatarUpload = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp']
+    if (!validTypes.includes(file.type)) {
+      alert('Wybierz plik JPG, PNG lub WebP')
+      return
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      alert('Plik jest zbyt duży. Maksymalny rozmiar to 2 MB.')
       return
     }
 
-    // Auto-add leader as accepted member
-    await supabase.from('team_members').insert({
-      team_id: team.id,
-      user_id: user.id,
-      status: 'accepted'
-    })
+    setAvatarUploading(true)
+    const formData = new FormData()
+    formData.append('avatar', file)
 
-    setNewTeamName('')
-    setNewTeamTag('')
-    fetchTeamsData()
+    try {
+      const res = await fetch(`${BASE_URL}/ggwp/avatar`, {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + getAccessToken() },
+        credentials: 'include',
+        body: formData,
+      })
+      if (!res.ok) {
+        const err = await res.json()
+        alert('Błąd przesyłania: ' + (err.error || 'Nieznany błąd'))
+        return
+      }
+      const updated = await api.get('/ggwp/auth/me')
+      if (updated?.id) {
+        onAuthChange(updated)
+        setAvatarUrl(updated.avatar_url || '')
+      }
+    } catch {
+      alert('Błąd połączenia')
+    } finally {
+      setAvatarUploading(false)
+    }
+  }
+
+  // ── Profile update ──
+  const handleProfileSave = async () => {
+    if (!nickname.trim()) { setProfileError('Nick nie może być pusty'); return }
+    if (phone && !PHONE_REGEX.test(phone)) { setProfileError('Nieprawidłowy numer telefonu'); return }
+
+    setProfileStatus('loading')
+    setProfileError('')
+
+    const fullPhone = phone.trim() ? `${dialCode} ${phone.trim()}` : null
+
+    try {
+      const updated = await api.patch('/ggwp/auth/me', {
+        nickname: nickname.trim(),
+        phone: fullPhone,
+        message: message.trim() || null,
+      })
+      if (updated?.id) onAuthChange(updated)
+      setProfileStatus('success')
+      setTimeout(() => setProfileStatus('idle'), 3000)
+    } catch {
+      setProfileError('Błąd aktualizacji profilu')
+      setProfileStatus('error')
+    }
+  }
+
+  // ── Email change ──
+  const handleEmailChange = async () => {
+    if (!EMAIL_REGEX.test(newEmail)) { setEmailError('Podaj prawidłowy adres e-mail'); return }
+    if (newEmail === user.email) { setEmailError('To jest Twój obecny e-mail'); return }
+    if (!emailPassword) { setEmailError('Podaj obecne hasło'); return }
+
+    setEmailStatus('loading')
+    setEmailError('')
+
+    try {
+      await api.patch('/ggwp/auth/me/email', { email: newEmail, password: emailPassword })
+      setEmailStatus('success')
+      setTimeout(() => {
+        clearAccessToken()
+        onAuthChange(null)
+        onNavigate('landing')
+      }, 2000)
+    } catch (err) {
+      const msg = err?.message || ''
+      if (msg.includes('409') || msg.includes('already')) {
+        setEmailError('Ten e-mail jest już zajęty')
+      } else if (msg.includes('401') || msg.includes('Invalid')) {
+        setEmailError('Nieprawidłowe hasło')
+      } else {
+        setEmailError('Błąd zmiany e-maila')
+      }
+      setEmailStatus('error')
+    }
+  }
+
+  // ── Password change ──
+  const handlePasswordChange = async () => {
+    if (!currentPassword) { setPasswordError('Podaj obecne hasło'); return }
+    if (!PASSWORD_REGEX.test(newPassword)) {
+      setPasswordError('Hasło musi zawierać min. 8 znaków, dużą literę, małą literę i cyfrę')
+      return
+    }
+    if (newPassword !== confirmPassword) { setPasswordError('Hasła się nie zgadzają'); return }
+
+    setPasswordStatus('loading')
+    setPasswordError('')
+
+    try {
+      await api.patch('/ggwp/auth/me/password', {
+        old_password: currentPassword,
+        new_password: newPassword,
+      })
+      setPasswordStatus('success')
+      setCurrentPassword('')
+      setNewPassword('')
+      setConfirmPassword('')
+      setTimeout(() => {
+        clearAccessToken()
+        onAuthChange(null)
+        onNavigate('landing')
+      }, 2000)
+    } catch (err) {
+      const msg = err?.message || ''
+      if (msg.includes('401') || msg.includes('Invalid')) {
+        setPasswordError('Obecne hasło jest nieprawidłowe')
+      } else {
+        setPasswordError('Błąd zmiany hasła')
+      }
+      setPasswordStatus('error')
+    }
+  }
+
+  // ── Delete account ──
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== 'USUŃ') return
+    setDeleteStatus('loading')
+
+    try {
+      await api.delete('/ggwp/auth/me')
+      clearAccessToken()
+      onAuthChange(null)
+      onNavigate('landing')
+    } catch {
+      alert('Błąd usuwania konta')
+      setDeleteStatus('error')
+    }
   }
 
   if (!user) {
@@ -304,173 +387,14 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
     )
   }
 
-  // ── Avatar upload ──
-  const handleAvatarUpload = async (e) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-
-    if (!file.type.startsWith('image/')) {
-      alert('Wybierz plik graficzny (JPG, PNG, GIF, WebP)')
-      return
-    }
-    if (file.size > 2 * 1024 * 1024) {
-      alert('Plik jest zbyt duży. Maksymalny rozmiar to 2 MB.')
-      return
-    }
-
-    setAvatarUploading(true)
-    const ext = file.name.split('.').pop()
-    const path = `${user.id}/avatar.${ext}`
-
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(path, file, { cacheControl: '3600', upsert: true })
-
-    if (uploadError) {
-      console.error(uploadError)
-      alert('Błąd przesyłania: ' + uploadError.message)
-      setAvatarUploading(false)
-      return
-    }
-
-    const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(path)
-    const publicUrl = urlData.publicUrl + '?t=' + Date.now() // cache bust
-
-    const { error: updateError } = await supabase.auth.updateUser({
-      data: { ...meta, avatar_url: publicUrl }
-    })
-
-    if (updateError) {
-      console.error(updateError)
-      alert('Błąd aktualizacji profilu')
-    } else {
-      setAvatarUrl(publicUrl)
-      // Refresh user
-      const { data: { user: refreshed } } = await supabase.auth.getUser()
-      if (refreshed) onAuthChange(refreshed)
-    }
-    setAvatarUploading(false)
-  }
-
-  // ── Profile update ──
-  const handleProfileSave = async () => {
-    if (!nickname.trim()) { setProfileError('Nick nie może być pusty'); return }
-    if (phone && !PHONE_REGEX.test(phone)) { setProfileError('Nieprawidłowy numer telefonu'); return }
-
-    setProfileStatus('loading')
-    setProfileError('')
-
-    const fullPhone = phone ? `${dialCode} ${phone.trim()}` : ''
-    const { error } = await supabase.auth.updateUser({
-      data: {
-        ...meta,
-        nickname: nickname.trim(),
-        display_name: nickname.trim(),
-        phone: fullPhone,
-        message: message.trim(),
-      }
-    })
-
-    if (error) {
-      console.error(error)
-      setProfileError('Błąd aktualizacji: ' + error.message)
-      setProfileStatus('error')
-    } else {
-      setProfileStatus('success')
-      const { data: { user: refreshed } } = await supabase.auth.getUser()
-      if (refreshed) onAuthChange(refreshed)
-      setTimeout(() => setProfileStatus('idle'), 3000)
-    }
-  }
-
-  // ── Email change ──
-  const handleEmailChange = async () => {
-    if (!EMAIL_REGEX.test(newEmail)) { setEmailError('Podaj prawidłowy adres e-mail'); return }
-    if (newEmail === user.email) { setEmailError('To jest Twój obecny e-mail'); return }
-
-    setEmailStatus('loading')
-    setEmailError('')
-
-    const { error } = await supabase.auth.updateUser({ email: newEmail })
-
-    if (error) {
-      console.error(error)
-      if (error.message.includes('already')) {
-        setEmailError('Ten e-mail jest już zajęty')
-      } else {
-        setEmailError('Błąd: ' + error.message)
-      }
-      setEmailStatus('error')
-    } else {
-      setEmailStatus('success')
-    }
-  }
-
-  // ── Password change ──
-  const handlePasswordChange = async () => {
-    if (!currentPassword) { setPasswordError('Podaj obecne hasło'); return }
-    if (!PASSWORD_REGEX.test(newPassword)) {
-      setPasswordError('Hasło musi zawierać min. 8 znaków, dużą literę, małą literę i cyfrę')
-      return
-    }
-    if (newPassword !== confirmPassword) { setPasswordError('Hasła się nie zgadzają'); return }
-
-    setPasswordStatus('loading')
-    setPasswordError('')
-
-    // Verify current password by re-signing in
-    const { error: loginError } = await supabase.auth.signInWithPassword({
-      email: user.email,
-      password: currentPassword,
-    })
-
-    if (loginError) {
-      setPasswordError('Obecne hasło jest nieprawidłowe')
-      setPasswordStatus('error')
-      return
-    }
-
-    const { error } = await supabase.auth.updateUser({ password: newPassword })
-
-    if (error) {
-      console.error(error)
-      setPasswordError('Błąd: ' + error.message)
-      setPasswordStatus('error')
-    } else {
-      setPasswordStatus('success')
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
-      setTimeout(() => setPasswordStatus('idle'), 3000)
-    }
-  }
-
-  // ── Delete account (real) ──
-  const handleDeleteAccount = async () => {
-    if (deleteConfirm !== 'USUŃ') return
-    setDeleteStatus('loading')
-
-    const { error } = await supabase.rpc('delete_own_account')
-
-    if (!error) {
-      await supabase.auth.signOut()
-      onAuthChange(null)
-      onNavigate('landing')
-    } else {
-      console.error(error)
-      alert('Błąd usuwania konta: ' + error.message)
-      setDeleteStatus('error')
-    }
-  }
-
   const initials = (nickname || user.email?.split('@')[0] || '?').slice(0, 2).toUpperCase()
 
   return (
     <div className="gh-page">
-      <Navbar 
-        onNavigate={onNavigate} 
-        currentView="account" 
-        user={user} 
+      <Navbar
+        onNavigate={onNavigate}
+        currentView="account"
+        user={user}
         onAuthChange={onAuthChange}
         initialTabData={initialTabData}
       />
@@ -504,191 +428,203 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
 
       <main className="gh-main" style={{ marginTop: '73px' }}>
         <div className="account-header-row">
-          <h1 className="gh-title" data-text={activeTab === 'teams' ? "Moje Drużyny" : "Moje Konto"}>
-            {activeTab === 'teams' ? "Moje Drużyny" : "Moje Konto"}
+          <h1 className="gh-title" data-text={activeTab === 'teams' ? 'Moje Drużyny' : 'Moje Konto'}>
+            {activeTab === 'teams' ? 'Moje Drużyny' : 'Moje Konto'}
           </h1>
         </div>
 
         {activeTab === 'profile' ? (
           <>
-        {/* ── Avatar Section ── */}
-        <section className="account-section">
-          <div className="account-avatar-section">
-            <div className="account-avatar" onClick={() => fileInputRef.current?.click()}>
-              {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" />
-              ) : (
-                <span className="account-avatar__initials">{initials}</span>
-              )}
-              <div className="account-avatar__overlay">
-                {avatarUploading ? '⏳' : '📷'}
+            {/* ── Avatar Section ── */}
+            <section className="account-section">
+              <div className="account-avatar-section">
+                <div className="account-avatar" onClick={() => fileInputRef.current?.click()}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="Avatar" />
+                  ) : (
+                    <span className="account-avatar__initials">{initials}</span>
+                  )}
+                  <div className="account-avatar__overlay">
+                    {avatarUploading ? '⏳' : '📷'}
+                  </div>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handleAvatarUpload}
+                />
+                <div className="account-avatar-info">
+                  <h2 className="account-avatar-info__name">{nickname || user.email?.split('@')[0]}</h2>
+                  <p className="account-avatar-info__email">{user.email}</p>
+                  <button
+                    className="account-avatar-info__btn"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={avatarUploading}
+                  >
+                    {avatarUploading ? 'Przesyłanie…' : '📷 Zmień zdjęcie'}
+                  </button>
+                </div>
               </div>
-            </div>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleAvatarUpload}
-            />
-            <div className="account-avatar-info">
-              <h2 className="account-avatar-info__name">{nickname || user.email?.split('@')[0]}</h2>
-              <p className="account-avatar-info__email">{user.email}</p>
+            </section>
+
+            {/* ── Profile Info ── */}
+            <section className="account-section">
+              <h2 className="account-section__title">👤 Dane profilu</h2>
+
+              <label className="account-label">Nickname</label>
+              <input
+                className="account-input"
+                value={nickname}
+                onChange={(e) => { setNickname(e.target.value); setProfileError('') }}
+                placeholder="Twój nick"
+              />
+
+              <label className="account-label">Numer telefonu</label>
+              <div className="account-phone-row">
+                <select
+                  className="account-dial-select"
+                  value={dialCode}
+                  onChange={(e) => setDialCode(e.target.value)}
+                >
+                  {DIAL_CODES.map((d) => (
+                    <option key={d.code} value={d.code}>{d.label}</option>
+                  ))}
+                </select>
+                <input
+                  className="account-input account-phone-input"
+                  value={phone}
+                  onChange={(e) => { setPhone(e.target.value); setProfileError('') }}
+                  placeholder="123 456 789"
+                  type="tel"
+                />
+              </div>
+
+              <label className="account-label">Wiadomość / bio</label>
+              <textarea
+                className="account-input account-textarea"
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder="Coś o sobie..."
+                rows={3}
+              />
+
+              {profileError && <p className="account-error">⚠ {profileError}</p>}
+              {profileStatus === 'success' && <p className="account-success">✅ Profil zaktualizowany!</p>}
+
               <button
-                className="account-avatar-info__btn"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={avatarUploading}
+                className="gh-btn"
+                onClick={handleProfileSave}
+                disabled={profileStatus === 'loading'}
               >
-                {avatarUploading ? 'Przesyłanie…' : '📷 Zmień zdjęcie'}
+                {profileStatus === 'loading' ? 'Zapisywanie…' : '💾 Zapisz zmiany'}
               </button>
-            </div>
-          </div>
-        </section>
+            </section>
 
-        {/* ── Profile Info ── */}
-        <section className="account-section">
-          <h2 className="account-section__title">👤 Dane profilu</h2>
+            {/* ── Email Change ── */}
+            <section className="account-section">
+              <h2 className="account-section__title">📧 Zmiana e-maila</h2>
 
-          <label className="account-label">Nickname</label>
-          <input
-            className="account-input"
-            value={nickname}
-            onChange={(e) => { setNickname(e.target.value); setProfileError('') }}
-            placeholder="Twój nick"
-          />
+              <label className="account-label">Obecny e-mail</label>
+              <input className="account-input" value={user.email} disabled />
 
-          <label className="account-label">Numer telefonu</label>
-          <div className="account-phone-row">
-            <select
-              className="account-dial-select"
-              value={dialCode}
-              onChange={(e) => setDialCode(e.target.value)}
-            >
-              {DIAL_CODES.map((d) => (
-                <option key={d.code} value={d.code}>{d.label}</option>
-              ))}
-            </select>
-            <input
-              className="account-input account-phone-input"
-              value={phone}
-              onChange={(e) => { setPhone(e.target.value); setProfileError('') }}
-              placeholder="123 456 789"
-              type="tel"
-            />
-          </div>
+              <label className="account-label">Nowy e-mail</label>
+              <input
+                className="account-input"
+                type="email"
+                value={newEmail}
+                onChange={(e) => { setNewEmail(e.target.value); setEmailError(''); setEmailStatus('idle') }}
+                placeholder="nowy@email.pl"
+              />
 
-          <label className="account-label">Wiadomość / bio</label>
-          <textarea
-            className="account-input account-textarea"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Coś o sobie..."
-            rows={3}
-          />
+              <label className="account-label">Hasło (potwierdzenie)</label>
+              <input
+                className="account-input"
+                type="password"
+                value={emailPassword}
+                onChange={(e) => { setEmailPassword(e.target.value); setEmailError(''); setEmailStatus('idle') }}
+                placeholder="Twoje obecne hasło"
+                autoComplete="current-password"
+              />
 
-          {profileError && <p className="account-error">⚠ {profileError}</p>}
-          {profileStatus === 'success' && <p className="account-success">✅ Profil zaktualizowany!</p>}
+              {emailError && <p className="account-error">⚠ {emailError}</p>}
+              {emailStatus === 'success' && (
+                <p className="account-success">
+                  ✅ E-mail zmieniony. Za chwilę zostaniesz wylogowany…
+                </p>
+              )}
 
-          <button
-            className="gh-btn"
-            onClick={handleProfileSave}
-            disabled={profileStatus === 'loading'}
-          >
-            {profileStatus === 'loading' ? 'Zapisywanie…' : '💾 Zapisz zmiany'}
-          </button>
-        </section>
+              <button
+                className="gh-btn"
+                onClick={handleEmailChange}
+                disabled={emailStatus === 'loading' || emailStatus === 'success'}
+              >
+                {emailStatus === 'loading' ? 'Zapisywanie…' : '📧 Zmień e-mail'}
+              </button>
+            </section>
 
-        {/* ── Email Change ── */}
-        <section className="account-section">
-          <h2 className="account-section__title">📧 Zmiana e-maila</h2>
+            {/* ── Password Change ── */}
+            <section className="account-section">
+              <h2 className="account-section__title">🔑 Zmiana hasła</h2>
 
-          <label className="account-label">Obecny e-mail</label>
-          <input className="account-input" value={user.email} disabled />
+              <label className="account-label">Obecne hasło</label>
+              <input
+                className="account-input"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
+                placeholder="Obecne hasło"
+                autoComplete="current-password"
+              />
 
-          <label className="account-label">Nowy e-mail</label>
-          <input
-            className="account-input"
-            type="email"
-            value={newEmail}
-            onChange={(e) => { setNewEmail(e.target.value); setEmailError(''); setEmailStatus('idle') }}
-            placeholder="nowy@email.pl"
-          />
+              <label className="account-label">Nowe hasło</label>
+              <input
+                className="account-input"
+                type="password"
+                value={newPassword}
+                onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
+                placeholder="Nowe hasło"
+                autoComplete="new-password"
+              />
 
-          {emailError && <p className="account-error">⚠ {emailError}</p>}
-          {emailStatus === 'success' && (
-            <p className="account-success">
-              ✅ Link potwierdzający został wysłany na oba adresy e-mail.
-            </p>
-          )}
+              <label className="account-label">Potwierdź nowe hasło</label>
+              <input
+                className="account-input"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
+                placeholder="Powtórz nowe hasło"
+                autoComplete="new-password"
+              />
 
-          <button
-            className="gh-btn"
-            onClick={handleEmailChange}
-            disabled={emailStatus === 'loading' || emailStatus === 'success'}
-          >
-            {emailStatus === 'loading' ? 'Wysyłanie…' : '📧 Zmień e-mail'}
-          </button>
-        </section>
+              {passwordError && <p className="account-error">⚠ {passwordError}</p>}
+              {passwordStatus === 'success' && (
+                <p className="account-success">✅ Hasło zmienione. Za chwilę zostaniesz wylogowany…</p>
+              )}
 
-        {/* ── Password Change ── */}
-        <section className="account-section">
-          <h2 className="account-section__title">🔑 Zmiana hasła</h2>
+              <button
+                className="gh-btn"
+                onClick={handlePasswordChange}
+                disabled={passwordStatus === 'loading' || passwordStatus === 'success'}
+              >
+                {passwordStatus === 'loading' ? 'Zmienianie…' : '🔑 Zmień hasło'}
+              </button>
+            </section>
 
-          <label className="account-label">Obecne hasło</label>
-          <input
-            className="account-input"
-            type="password"
-            value={currentPassword}
-            onChange={(e) => { setCurrentPassword(e.target.value); setPasswordError('') }}
-            placeholder="Obecne hasło"
-            autoComplete="current-password"
-          />
-
-          <label className="account-label">Nowe hasło</label>
-          <input
-            className="account-input"
-            type="password"
-            value={newPassword}
-            onChange={(e) => { setNewPassword(e.target.value); setPasswordError('') }}
-            placeholder="Nowe hasło"
-            autoComplete="new-password"
-          />
-
-          <label className="account-label">Potwierdź nowe hasło</label>
-          <input
-            className="account-input"
-            type="password"
-            value={confirmPassword}
-            onChange={(e) => { setConfirmPassword(e.target.value); setPasswordError('') }}
-            placeholder="Powtórz nowe hasło"
-            autoComplete="new-password"
-          />
-
-          {passwordError && <p className="account-error">⚠ {passwordError}</p>}
-          {passwordStatus === 'success' && <p className="account-success">✅ Hasło zmienione!</p>}
-
-          <button
-            className="gh-btn"
-            onClick={handlePasswordChange}
-            disabled={passwordStatus === 'loading'}
-          >
-            {passwordStatus === 'loading' ? 'Zmienianie…' : '🔑 Zmień hasło'}
-          </button>
-        </section>
-
-        {/* ── Danger Zone ── */}
-        <section className="account-section account-danger">
-          <h2 className="account-section__title" style={{ color: '#f87171' }}>⚠️ Strefa niebezpieczna</h2>
-          <p style={{ color: 'var(--gh-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
-            Usunięcie konta jest nieodwracalne. Wszystkie Twoje dane zostaną permanentnie usunięte.
-          </p>
-          <button
-            className="account-danger__btn"
-            onClick={() => { setShowDeleteModal(true); setDeleteConfirm(''); setDeleteStatus('idle') }}
-          >
-            🗑️ Usuń konto
-          </button>
-          </section>
+            {/* ── Danger Zone ── */}
+            <section className="account-section account-danger">
+              <h2 className="account-section__title" style={{ color: '#f87171' }}>⚠️ Strefa niebezpieczna</h2>
+              <p style={{ color: 'var(--gh-muted)', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                Usunięcie konta jest nieodwracalne. Wszystkie Twoje dane zostaną permanentnie usunięte.
+              </p>
+              <button
+                className="account-danger__btn"
+                onClick={() => { setShowDeleteModal(true); setDeleteConfirm(''); setDeleteStatus('idle') }}
+              >
+                🗑️ Usuń konto
+              </button>
+            </section>
           </>
         ) : (
           <div className="teams-view">
@@ -700,12 +636,12 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
                   {invites.map(inv => (
                     <div key={inv.id} className="invite-card">
                       <div className="invite-info">
-                        <strong>{inv.team.team_name} [{inv.team.tag}]</strong>
+                        <strong>{inv.team_name} [{inv.tag}]</strong>
                         <p>Zaprasza Cię do dołączenia</p>
                       </div>
                       <div className="invite-actions">
-                        <button className="gh-btn gh-btn--success btn-sm" onClick={() => handleRespondInvite(inv.id, 'accepted')}>Akceptuj</button>
-                        <button className="gh-btn gh-btn--outline btn-sm" style={{borderColor: '#f87171', color: '#f87171'}} onClick={() => handleRespondInvite(inv.id, 'rejected')}>Odrzuć</button>
+                        <button className="gh-btn gh-btn--success btn-sm" onClick={() => handleRespondInvite(inv, 'accept')}>Akceptuj</button>
+                        <button className="gh-btn gh-btn--outline btn-sm" style={{ borderColor: '#f87171', color: '#f87171' }} onClick={() => handleRespondInvite(inv, 'reject')}>Odrzuć</button>
                       </div>
                     </div>
                   ))}
@@ -719,7 +655,7 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
               {teamsLoading ? (
                 <p>Ładowanie drużyn...</p>
               ) : myTeams.length === 0 ? (
-                <p style={{color: 'var(--gh-muted)'}}>Nie należysz jeszcze do żadnej drużyny.</p>
+                <p style={{ color: 'var(--gh-muted)' }}>Nie należysz jeszcze do żadnej drużyny.</p>
               ) : (
                 <div className="teams-list">
                   {myTeams.map(t => (
@@ -738,40 +674,47 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
 
                       <div className="team-item__members">
                         <div className="members-list-mini">
-                          {t.members.map(m => (
-                            <div key={m.user_id} className={`member-chip ${m.status === 'pending' ? 'pending' : ''}`}>
-                              <img src={m.profile?.avatar_url || 'https://api.dicebear.com/7.x/pixel-art/svg?seed=' + (m.profile?.nickname || 'user')} alt="" />
-                              <span>{m.profile?.nickname}</span>
+                          {(t.members || []).map(m => (
+                            <div key={m.id} className={`member-chip ${m.status === 'pending' ? 'pending' : ''}`}>
+                              <img
+                                src={m.avatar_url || `https://api.dicebear.com/7.x/pixel-art/svg?seed=${m.nickname || 'user'}`}
+                                alt=""
+                              />
+                              <span>{m.nickname}</span>
                               {t.leader_id === user.id && m.user_id !== user.id && (
-                                <button className="kick-small" onClick={() => handleKickMember(t.id, m.user_id)}>×</button>
+                                <button className="kick-small" onClick={() => handleKickMember(m.id)}>×</button>
                               )}
                             </div>
                           ))}
                         </div>
                       </div>
-                      
+
                       <div className="team-item__actions">
                         {t.leader_id === user.id && (
                           <div className="user-search-box">
                             <input
                               placeholder="➕ Zaproś gracza..."
                               className="account-input search-input"
+                              value={searchQuery}
                               onChange={(e) => {
-                                setSearchQuery(e.target.value);
-                                if (e.target.value.length > 1) handleSearchUsers();
+                                setSearchQuery(e.target.value)
+                                handleSearchUsers(e.target.value)
                               }}
                             />
                             {searchQuery.length > 1 && (
                               <div className="search-dropdown">
-                                {searching ? <p className="p-2 text-xs">Szukanie...</p> :
-                                 searchResults.length === 0 ? <p className="p-2 text-xs">Brak</p> :
-                                 searchResults.map(res => (
-                                   <div key={res.id} className="search-res-item" onClick={() => handleInvitePlayer(t.id, res.id)}>
-                                     <span>{res.nickname}</span>
-                                     <button className="btn-invite">Zaproś</button>
-                                   </div>
-                                 ))
-                                }
+                                {searching ? (
+                                  <p className="p-2 text-xs">Szukanie...</p>
+                                ) : searchResults.length === 0 ? (
+                                  <p className="p-2 text-xs">Brak wyników</p>
+                                ) : (
+                                  searchResults.map(res => (
+                                    <div key={res.id} className="search-res-item" onClick={() => handleInvitePlayer(t.id, res.id)}>
+                                      <span>{res.nickname}</span>
+                                      <button className="btn-invite">Zaproś</button>
+                                    </div>
+                                  ))
+                                )}
                               </div>
                             )}
                           </div>
@@ -800,31 +743,31 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
               <div className="create-team-form">
                 <div className="form-group">
                   <label className="account-label">Nazwa Drużyny</label>
-                  <input 
-                    className="account-input" 
-                    placeholder="np. Polish Power" 
+                  <input
+                    className="account-input"
+                    placeholder="np. Polish Power"
                     value={newTeamName}
                     onChange={e => setNewTeamName(e.target.value)}
                   />
                 </div>
                 <div className="form-group">
                   <label className="account-label">Tag (2-5 znaków)</label>
-                  <input 
-                    className="account-input" 
-                    placeholder="PPW" 
+                  <input
+                    className="account-input"
+                    placeholder="PPW"
                     maxLength={5}
                     value={newTeamTag}
                     onChange={e => setNewTeamTag(e.target.value.toUpperCase())}
                   />
                 </div>
-                <button className="gh-btn" style={{marginTop: '1rem'}} onClick={handleCreateTeam}>
+                <button className="gh-btn" style={{ marginTop: '1rem' }} onClick={handleCreateTeam}>
                   🚀 Stwórz Drużynę
                 </button>
               </div>
             </section>
           </div>
         )}
-        </main>
+      </main>
 
       <Footer />
     </div>

@@ -6,3 +6,6 @@ CLAUDE.md
 .env
 .env.local
 .env.*.local
+
+# Internal API docs — never commit (contains dev creds + DB info)
+API_CONNECTIVITY.md
