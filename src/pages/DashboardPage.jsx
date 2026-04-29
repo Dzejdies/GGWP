@@ -50,10 +50,10 @@ export default function DashboardPage({ onNavigate, user, onAuthChange }) {
 
       // Zbieramy wszystkie unikalne turnieje (Solo + Team)
       let allUpcoming = [];
-      if (participants) {
+      if (Array.isArray(participants)) {
         allUpcoming = [...allUpcoming, ...participants.map(p => p.tournaments).filter(t => t)];
       }
-      if (teamsData) {
+      if (Array.isArray(teamsData)) {
         allUpcoming = [...allUpcoming, ...teamsData.map(t => t.tournaments).filter(t => t)];
       }
 
@@ -64,7 +64,7 @@ export default function DashboardPage({ onNavigate, user, onAuthChange }) {
           .map(item => [item.id, item])
       ).values());
 
-      let enrolledCount = (participants ? participants.length : 0) + (teamsData ? teamsData.filter(t => t.tournament_id).length : 0);
+      let enrolledCount = (Array.isArray(participants) ? participants.length : 0) + (Array.isArray(teamsData) ? teamsData.filter(t => t.tournament_id).length : 0);
 
       if (mounted) {
         setStats(prev => ({
@@ -74,7 +74,7 @@ export default function DashboardPage({ onNavigate, user, onAuthChange }) {
           ggwpPoints: user?.user_metadata?.ggwp_points || (enrolledCount * 250)
         }))
 
-        if (teamsData && teamsData.length > 0) {
+        if (Array.isArray(teamsData) && teamsData.length > 0) {
           setMyTeam(teamsData[0]); // Pokaż pierwszą drużynę w jakiej gracz jest
         }
 
@@ -92,7 +92,7 @@ export default function DashboardPage({ onNavigate, user, onAuthChange }) {
         .order('created_at', { ascending: false })
         .limit(4)
 
-      if (mounted && notifs) {
+      if (mounted && Array.isArray(notifs)) {
         const mappedFeed = notifs.map(n => ({
           id: n.id,
           icon: n.title.includes('Zaproszenie') || n.title.includes('Drużyny') ? '📩' : (n.title.includes('Liderem') ? '👑' : '🔔'),
