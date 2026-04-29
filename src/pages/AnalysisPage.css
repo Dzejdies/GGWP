@@ -276,6 +276,200 @@
   line-height: 1.6;
 }
 
+/* HEART Metrics */
+.heart-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.heart-row {
+  display: flex;
+  gap: 1.5rem;
+  background: var(--gh-surface);
+  border: 1px solid var(--gh-border);
+  padding: 1.5rem;
+  position: relative;
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.heart-row:hover {
+  border-color: var(--gh-purple-lt);
+  box-shadow: var(--gh-glow-md);
+}
+
+.heart-row__letter {
+  font-family: 'Russo One', sans-serif;
+  font-size: 2.5rem;
+  min-width: 3rem;
+  line-height: 1;
+  border-left: 2px solid;
+  padding-left: 0.75rem;
+  display: flex;
+  align-items: center;
+}
+
+.heart-row__content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.heart-row__header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.heart-row__icon {
+  font-size: 1.25rem;
+}
+
+.heart-row__category {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1rem;
+  color: var(--gh-title-c);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.heart-row__fields {
+  display: flex;
+  gap: 2rem;
+}
+
+.heart-row__field {
+  flex: 1;
+}
+
+.heart-row__field--metric {
+  flex: 1.5;
+}
+
+.heart-row__field-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--gh-purple-lt);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.heart-row__field-text {
+  font-size: 0.875rem;
+  color: var(--gh-text);
+  line-height: 1.6;
+}
+
+/* Concept Test Section */
+.concept-tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin-top: 0.5rem;
+}
+
+.concept-task {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  background: var(--gh-bg);
+  border: 1px solid var(--gh-border);
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s ease;
+}
+
+.concept-task:hover {
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+.concept-task__num-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.5rem;
+  background: rgba(124, 58, 237, 0.07);
+  border-right: 1px solid var(--gh-border);
+  padding: 1rem 0;
+  flex-shrink: 0;
+}
+
+.concept-task__num {
+  font-family: 'Russo One', sans-serif;
+  font-size: 1.375rem;
+  color: var(--gh-purple);
+  line-height: 1;
+}
+
+.concept-task__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.875rem 1.25rem;
+  flex: 1;
+}
+
+.concept-task__scenario {
+  font-size: 0.8125rem;
+  color: var(--gh-title-c);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-family: 'Russo One', sans-serif;
+}
+
+.concept-task__desc {
+  font-size: 0.875rem;
+  color: var(--gh-text);
+  line-height: 1.5;
+}
+
+.concept-task__criteria {
+  font-size: 0.75rem;
+  color: var(--gh-cyan);
+  font-style: italic;
+  margin-top: 0.15rem;
+}
+
+.concept-results-placeholder__text {
+  font-size: 0.875rem;
+  color: var(--gh-muted);
+  line-height: 1.6;
+  margin-bottom: 1.25rem;
+}
+
+.concept-results-table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.concept-results-table__row {
+  display: grid;
+  grid-template-columns: 120px 160px 100px 1fr;
+  gap: 1rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+}
+
+.concept-results-table__row--header {
+  background: var(--gh-bg);
+  color: var(--gh-purple-lt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.6875rem;
+}
+
+.concept-results-table__row--empty {
+  background: var(--gh-bg);
+  color: var(--gh-muted);
+  border: 1px dashed var(--gh-border);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .analysis-grid--3 {
@@ -302,5 +496,23 @@
 
   .garrett-level__number {
     font-size: 1.75rem;
+  }
+
+  .heart-row {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .heart-row__letter {
+    font-size: 1.75rem;
+    border-left: none;
+    border-bottom: 2px solid;
+    padding-left: 0;
+    padding-bottom: 0.5rem;
+  }
+
+  .heart-row__fields {
+    flex-direction: column;
+    gap: 1rem;
   }
 }

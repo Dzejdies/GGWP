@@ -5,6 +5,8 @@ import TargetGroupSection from '../components/analysis/TargetGroupSection'
 import PersonasSection from '../components/analysis/PersonasSection'
 import OrganizerNeedsSection from '../components/analysis/OrganizerNeedsSection'
 import GarrettLevelsSection from '../components/analysis/GarrettLevelsSection'
+import HEARTSection from '../components/analysis/HEARTSection'
+import ConceptTestSection from '../components/analysis/ConceptTestSection'
 
 export default function AnalysisPage({ onNavigate, user, onAuthChange }) {
   return (
@@ -17,6 +19,8 @@ export default function AnalysisPage({ onNavigate, user, onAuthChange }) {
         <PersonasSection />
         <OrganizerNeedsSection />
         <GarrettLevelsSection />
+        <HEARTSection />
+        <ConceptTestSection />
       </main>
 
       <Footer />
