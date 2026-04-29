@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { supabase } from '../lib/supabase';
-import './WizardRegistrationModal.css';
-import './button.css';
+import React, { useState } from 'react'
+import api from '../lib/api'
+import './WizardRegistrationModal.css'
+import './button.css'
 
 export default function WizardRegistrationModal({ tournament, user, onClose, onSuccess }) {
   if (!user) {
@@ -20,7 +20,8 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
       </div>
     )
   }
-  const [step, setStep] = useState(1);
+
+  const [step, setStep] = useState(1)
   const [formData, setFormData] = useState({
     team_name: '',
     tag: '',
@@ -30,165 +31,116 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
     discord_joined: false,
     game_rank: '',
     accepted_rules: false,
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [myManagedTeams, setMyManagedTeams] = useState([]);
-  const [mode, setMode] = useState('new'); // 'new' | 'existing'
-  const [selectedTeamId, setSelectedTeamId] = useState('');
+  })
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [myManagedTeams, setMyManagedTeams] = useState([])
+  const [mode, setMode] = useState('new')
+  const [selectedTeamId, setSelectedTeamId] = useState('')
 
   React.useEffect(() => {
     const fetchMyTeams = async () => {
-      const { data, error } = await supabase
-        .from('teams')
-        .select('*')
-        .eq('leader_id', user.id);
-      
-      if (!error && data?.length > 0) {
-        setMyManagedTeams(data);
-        // Default to existing if they have any
-        setMode('existing');
-        handleSelectExisting(data[0]);
+      try {
+        const teams = await api.get('/ggwp/teams/mine')
+        if (!Array.isArray(teams)) return
+        const led = teams.filter(t => t.leader_id === user.id)
+        if (led.length > 0) {
+          setMyManagedTeams(led)
+          setMode('existing')
+          handleSelectExisting(led[0])
+        }
+      } catch {
+        // ignore
       }
-    };
-    fetchMyTeams();
-  }, [user.id]);
+    }
+    fetchMyTeams()
+  }, [user.id])
 
   const handleSelectExisting = (team) => {
-    setSelectedTeamId(team.id);
-    setFormData({
-      ...formData,
+    setSelectedTeamId(team.id)
+    setFormData(prev => ({
+      ...prev,
       team_name: team.team_name,
       tag: team.tag,
       avatarPreview: team.avatar_url,
-      avatarFile: null, // No need to re-upload
+      avatarFile: null,
       discord_id: team.discord_id || '',
-      game_rank: team.game_rank || ''
-    });
-  };
+      game_rank: team.game_rank || '',
+    }))
+  }
 
   const nextStep = () => {
     if (step === 1 && (!formData.team_name.trim() || !formData.tag.trim())) {
-      setError('Nazwa drużyny i Tag są wymagane!');
-      return;
+      setError('Nazwa drużyny i Tag są wymagane!')
+      return
     }
     if (step === 2 && (!formData.discord_id.trim() || !formData.discord_joined || !formData.game_rank)) {
-      setError('Uzupełnij wszystkie dane w tym kroku!');
-      return;
+      setError('Uzupełnij wszystkie dane w tym kroku!')
+      return
     }
     if (step === 3 && !formData.accepted_rules) {
-      setError('Musisz zaakceptować regulamin turnieju!');
-      return;
+      setError('Musisz zaakceptować regulamin turnieju!')
+      return
     }
-    
-    setError('');
-    setStep(prev => prev + 1);
-  };
+
+    setError('')
+    setStep(prev => prev + 1)
+  }
 
   const prevStep = () => {
-    setError('');
-    setStep(prev => prev - 1);
-  };
+    setError('')
+    setStep(prev => prev - 1)
+  }
 
   const handleFileChange = (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files[0]
     if (file) {
       setFormData({
         ...formData,
         avatarFile: file,
-        avatarPreview: URL.createObjectURL(file)
-      });
+        avatarPreview: URL.createObjectURL(file),
+      })
     }
-  };
+  }
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+    e.preventDefault()
+    setLoading(true)
+    setError('')
 
     try {
-      let avatar_url = null;
-
-      if (formData.avatarFile) {
-        const fileExt = formData.avatarFile.name.split('.').pop();
-        const fileName = `${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `${user.id}/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(filePath, formData.avatarFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data } = supabase.storage.from('avatars').getPublicUrl(filePath);
-        avatar_url = data.publicUrl;
-      }
-
-      // Jeśli tworzymy nową, to inserujemy. Jeśli wybieramy istniejącą, updatujemy tournament_id.
-      let finalTeam;
+      let finalTeam
 
       if (mode === 'new') {
-        const { data: newTeam, error: dbError } = await supabase
-          .from('teams')
-          .insert({
-            tournament_id: tournament.id,
-            leader_id: user.id,
-            team_name: formData.team_name,
-            tag: formData.tag.toUpperCase(),
-            avatar_url: avatar_url,
-            discord_id: formData.discord_id,
-            game_rank: formData.game_rank
-          })
-          .select()
-          .single();
-
-        if (dbError) throw dbError;
-        finalTeam = newTeam;
-
-        // DODATEK: Automatycznie dodajemy lidera do tabeli team_members
-        const { error: memberError } = await supabase
-          .from('team_members')
-          .insert({
-            team_id: finalTeam.id,
-            user_id: user.id,
-            status: 'accepted'
-          });
-
-        if (memberError) throw memberError;
+        finalTeam = await api.post('/ggwp/teams', {
+          tournament_id: tournament.id,
+          team_name: formData.team_name,
+          tag: formData.tag.toUpperCase(),
+          discord_id: formData.discord_id || null,
+          game_rank: formData.game_rank || null,
+        })
       } else {
-        // Mode existing: Aktualizujemy obecną drużynę o ID turnieju
-        const { data: updatedTeam, error: updateError } = await supabase
-          .from('teams')
-          .update({ 
-            tournament_id: tournament.id,
-            discord_id: formData.discord_id,
-            game_rank: formData.game_rank,
-            // Opcjonalnie aktualizujemy avatar jeśli wgrano nowy
-            ...(avatar_url && { avatar_url })
-          })
-          .eq('id', selectedTeamId)
-          .select()
-          .single();
-
-        if (updateError) throw updateError;
-        finalTeam = updatedTeam;
+        finalTeam = await api.patch(`/ggwp/teams/${selectedTeamId}`, {
+          tournament_id: tournament.id,
+          discord_id: formData.discord_id || null,
+          game_rank: formData.game_rank || null,
+        })
       }
 
-      onSuccess(finalTeam); // Poinformowanie powracającego komponentu
-
+      onSuccess(finalTeam)
     } catch (err) {
-      console.error(err);
-      setError('Wystąpił błąd podczas finalizacji: ' + err.message);
+      console.error(err)
+      setError('Wystąpił błąd podczas finalizacji drużyny.')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
   return (
     <div className="wizard-overlay" onClick={onClose}>
       <div className="wizard-modal" onClick={e => e.stopPropagation()}>
         <button className="wizard-close" onClick={onClose}>✕</button>
-        
+
         <div className="wizard-header">
           <h2>Zapisy na turniej</h2>
           <div className="wizard-progress">
@@ -209,20 +161,20 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
             <div className="wizard-step">
               <h3>Wybór Drużyny</h3>
               <p className="wizard-subtitle">Zgłoś swoją istniejącą ekipę lub stwórz zupełnie nową.</p>
-              
+
               {myManagedTeams.length > 0 && (
                 <div className="wizard-mode-toggle">
-                  <button 
+                  <button
                     className={`gh-btn btn-sm ${mode === 'existing' ? '' : 'gh-btn--outline'}`}
                     onClick={() => setMode('existing')}
                   >
                     Wybierz moją drużynę
                   </button>
-                  <button 
+                  <button
                     className={`gh-btn btn-sm ${mode === 'new' ? '' : 'gh-btn--outline'}`}
                     onClick={() => {
-                      setMode('new');
-                      setFormData({...formData, team_name: '', tag: '', avatarPreview: null});
+                      setMode('new')
+                      setFormData({ ...formData, team_name: '', tag: '', avatarPreview: null })
                     }}
                   >
                     Stwórz nowy skład
@@ -231,13 +183,13 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
               )}
 
               {mode === 'existing' ? (
-                <div className="wizard-field" style={{marginTop: '1.5rem'}}>
+                <div className="wizard-field" style={{ marginTop: '1.5rem' }}>
                   <label>Wybierz drużynę *</label>
-                  <select 
-                    value={selectedTeamId} 
+                  <select
+                    value={selectedTeamId}
                     onChange={(e) => {
-                      const team = myManagedTeams.find(t => t.id === e.target.value);
-                      if (team) handleSelectExisting(team);
+                      const team = myManagedTeams.find(t => t.id === e.target.value)
+                      if (team) handleSelectExisting(team)
                     }}
                   >
                     {myManagedTeams.map(t => (
@@ -247,23 +199,23 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
                 </div>
               ) : (
                 <>
-                  <div className="wizard-field" style={{marginTop: '1rem'}}>
+                  <div className="wizard-field" style={{ marginTop: '1rem' }}>
                     <label>Nazwa reprezentująca drużynę *</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={formData.team_name}
-                      onChange={e => setFormData({...formData, team_name: e.target.value})}
-                      placeholder="np. Niezwyciężeni Orłowie" 
+                      onChange={e => setFormData({ ...formData, team_name: e.target.value })}
+                      placeholder="np. Niezwyciężeni Orłowie"
                     />
                   </div>
 
                   <div className="wizard-field">
                     <label>Tag Drużyny (2-5 znaków) *</label>
-                    <input 
-                      type="text" 
+                    <input
+                      type="text"
                       value={formData.tag}
-                      onChange={e => setFormData({...formData, tag: e.target.value.toUpperCase()})}
-                      placeholder="np. ORŁY" 
+                      onChange={e => setFormData({ ...formData, tag: e.target.value.toUpperCase() })}
+                      placeholder="np. ORŁY"
                       maxLength={5}
                     />
                   </div>
@@ -271,25 +223,14 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
               )}
 
               <div className="wizard-field">
-                <label>Tag Drużyny (2-5 znaków) *</label>
-                <input 
-                  type="text" 
-                  value={formData.tag}
-                  onChange={e => setFormData({...formData, tag: e.target.value.toUpperCase()})}
-                  placeholder="np. ORŁY" 
-                  maxLength={5}
-                />
-              </div>
-
-              <div className="wizard-field">
-                <label>Avatar / Logo (Opcjonalnie)</label>
+                <label>Avatar / Logo (wyświetlanie podglądu, upload do drużyny dostępny wkrótce)</label>
                 <div className="avatar-upload-zone">
                   {formData.avatarPreview ? (
                     <img src={formData.avatarPreview} alt="Avatar" className="avatar-preview" />
                   ) : (
                     <div className="avatar-placeholder">🖼️</div>
                   )}
-                  <input type="file" accept="image/*" onChange={handleFileChange} />
+                  <input type="file" accept="image/*" onChange={handleFileChange} disabled />
                 </div>
               </div>
             </div>
@@ -299,31 +240,31 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
             <div className="wizard-step">
               <h3>Wymagania Kontaktowe</h3>
               <p className="wizard-subtitle">Organizator prosi o kontakt do kapitana w celach meczowych.</p>
-              
+
               <div className="wizard-field">
                 <label>Discord ID Kapitana *</label>
-                <input 
-                  type="text" 
+                <input
+                  type="text"
                   value={formData.discord_id}
-                  onChange={e => setFormData({...formData, discord_id: e.target.value})}
-                  placeholder="np. Kowalski#1234" 
+                  onChange={e => setFormData({ ...formData, discord_id: e.target.value })}
+                  placeholder="np. Kowalski#1234"
                 />
               </div>
 
               <label className="wizard-checkbox">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={formData.discord_joined}
-                  onChange={e => setFormData({...formData, discord_joined: e.target.checked})}
+                  onChange={e => setFormData({ ...formData, discord_joined: e.target.checked })}
                 />
                 Dołączyłem na oficjalny serwer Discord turnieju (discord.gg/turniej-ggwp)
               </label>
 
-              <div className="wizard-field" style={{marginTop: '1.5rem'}}>
+              <div className="wizard-field" style={{ marginTop: '1.5rem' }}>
                 <label>Deklarowana najwyższa ranga w grze *</label>
-                <select 
+                <select
                   value={formData.game_rank}
-                  onChange={e => setFormData({...formData, game_rank: e.target.value})}
+                  onChange={e => setFormData({ ...formData, game_rank: e.target.value })}
                 >
                   <option value="" disabled>--- Wybierz ---</option>
                   <option value="Brak (Unranked)">Brak (Unranked)</option>
@@ -340,7 +281,7 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
             <div className="wizard-step">
               <h3>Oświadczenia</h3>
               <p className="wizard-subtitle">Ostatni krok logistyczny przed zatwierdzeniem składu.</p>
-              
+
               <div className="rules-box">
                 <h4>Regulamin wydarzenia: {tournament.title}</h4>
                 <p>1. Zabrania się używania wulgarnych nazw profilowych.</p>
@@ -349,10 +290,10 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
               </div>
 
               <label className="wizard-checkbox highlight-checkbox">
-                <input 
-                  type="checkbox" 
+                <input
+                  type="checkbox"
                   checked={formData.accepted_rules}
-                  onChange={e => setFormData({...formData, accepted_rules: e.target.checked})}
+                  onChange={e => setFormData({ ...formData, accepted_rules: e.target.checked })}
                 />
                 Potwierdzam znajomość regulaminu i akceptuję przetwarzanie danych.
               </label>
@@ -363,7 +304,7 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
             <div className="wizard-step">
               <h3>Podsumowanie i Finalizacja</h3>
               <p className="wizard-subtitle">Sprawdź czy wszystkie dane się zgadzają.</p>
-              
+
               <div className="summary-box">
                 <div className="summary-row">
                   <span>Nazwa:</span>
@@ -381,10 +322,6 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
                   <span>Ranga:</span>
                   <strong>{formData.game_rank}</strong>
                 </div>
-                <div className="summary-row">
-                  <span>Avatar:</span>
-                  <strong>{formData.avatarFile ? 'Załączony' : 'Brak (Domyślny)'}</strong>
-                </div>
               </div>
             </div>
           )}
@@ -396,7 +333,7 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
               Wstecz
             </button>
           ) : <div></div>}
-          
+
           {step < 4 ? (
             <button className="gh-btn" onClick={nextStep}>
               Zapisz i Dalej
@@ -409,5 +346,5 @@ export default function WizardRegistrationModal({ tournament, user, onClose, onS
         </div>
       </div>
     </div>
-  );
+  )
 }

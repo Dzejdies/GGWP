@@ -1,78 +1,34 @@
 import { useState, useEffect, useRef } from 'react'
-import { supabase } from '../lib/supabase'
+import api from '../lib/api'
 import './PartyChat.css'
 import './button.css'
 
 export default function PartyChat({ team, user }) {
   const [messages, setMessages] = useState([])
-  const [profiles, setProfiles] = useState({})
   const [newMessage, setNewMessage] = useState('')
   const [loading, setLoading] = useState(true)
   const bottomRef = useRef(null)
 
   const fetchMessages = async () => {
-    const { data } = await supabase
-      .from('team_messages')
-      .select('*')
-      .eq('team_id', team.id)
-      .order('created_at', { ascending: true })
-      .limit(100)
-
-    if (data && data.length > 0) {
-      setMessages(data)
-      const uniqueIds = [...new Set(data.map(m => m.user_id))]
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('id, nickname, avatar_url')
-        .in('id', uniqueIds)
-
-      if (profileData) {
-        const map = {}
-        profileData.forEach(p => { map[p.id] = p })
-        setProfiles(map)
-      }
-    } else {
-      setMessages([])
+    try {
+      const data = await api.get(`/ggwp/chat/${team.id}`)
+      if (Array.isArray(data)) setMessages(data)
+    } catch {
+      // silently ignore
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   useEffect(() => {
     fetchMessages()
 
-    const channel = supabase
-      .channel(`party-chat-${team.id}`)
-      .on('postgres_changes', {
-        event: 'INSERT',
-        schema: 'public',
-        table: 'team_messages',
-        filter: `team_id=eq.${team.id}`
-      }, (payload) => {
-        // fetchMessages()
-        const newMessage = payload.new
-        setMessages(prev => [...prev, newMessage])
-        // We check if we need to fetch the profile
-        setProfiles(prevProfiles => {
-          if (!prevProfiles[newMessage.user_id]) {
-            supabase
-              .from('profiles')
-              .select('id, nickname, avatar_url')
-              .eq('id', newMessage.user_id)
-              .single()
-              .then(({ data }) => {
-                if (data) {
-                  // Pass a callback to setProfiles inside the then block
-                  setProfiles(p => ({ ...p, [data.id]: data }))
-                }
-              })
-          }
-          // The critical part: Always return the current state synchronously here!
-          return prevProfiles
-        })
-      })
-      .subscribe()
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'hidden') return
+      fetchMessages()
+    }, 5000)
 
-    return () => { supabase.removeChannel(channel) }
+    return () => clearInterval(interval)
   }, [team.id])
 
   useEffect(() => {
@@ -83,11 +39,13 @@ export default function PartyChat({ team, user }) {
     e.preventDefault()
     if (!newMessage.trim()) return
 
-    const { error } = await supabase
-      .from('team_messages')
-      .insert({ team_id: team.id, user_id: user.id, message: newMessage.trim() })
-
-    if (!error) setNewMessage('')
+    try {
+      await api.post(`/ggwp/chat/${team.id}`, { message: newMessage.trim() })
+      setNewMessage('')
+      fetchMessages()
+    } catch {
+      // silently ignore
+    }
   }
 
   return (
@@ -100,11 +58,10 @@ export default function PartyChat({ team, user }) {
         ) : (
           messages.map(m => {
             const isMe = m.user_id === user.id
-            const profile = profiles[m.user_id]
             return (
               <div key={m.id} className={`party-chat__msg ${isMe ? 'party-chat__msg--me' : ''}`}>
                 {!isMe && (
-                  <div className="party-chat__sender">{profile?.nickname || 'Gracz'}</div>
+                  <div className="party-chat__sender">{m.nickname || 'Gracz'}</div>
                 )}
                 <div className="party-chat__bubble">{m.message}</div>
               </div>

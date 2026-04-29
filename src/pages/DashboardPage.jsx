@@ -9,7 +9,7 @@ import NotificationRedirect from '../components/notificationRedirect'
 export default function DashboardPage({ onNavigate, user, onAuthChange }) {
   const [stats, setStats] = useState({
     tournamentsEnrolled: 0,
-    ggwpPoints: user?.user_metadata?.ggwp_points || 0,
+    ggwpPoints: user?.ggwp_points || 0,
     level: 1
   })
 
@@ -18,7 +18,7 @@ export default function DashboardPage({ onNavigate, user, onAuthChange }) {
   const [myTeam, setMyTeam] = useState(null)
   const [timeLeft, setTimeLeft] = useState('--:--')
 
-  const nickname = user?.user_metadata?.nickname || user?.email?.split('@')[0] || 'Graczu'
+  const nickname = user?.nickname || user?.email?.split('@')[0] || 'Graczu'
 
   useEffect(() => {
     let mounted = true
