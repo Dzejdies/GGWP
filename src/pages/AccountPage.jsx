@@ -160,13 +160,6 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
   const handleInvitePlayer = async (teamId, targetUserId) => {
     try {
       await api.post('/ggwp/team-members', { team_id: teamId, user_id: targetUserId })
-      const targetTeam = myTeams.find(t => t.id === teamId)
-      await api.post('/ggwp/notifications', {
-        user_id: targetUserId,
-        title: '📩 Nowe Zaproszenie',
-        message: `Zostałeś zaproszony do drużyny ${targetTeam?.team_name || 'Nowej Drużyny'}.`,
-        type: 'team',
-      })
       showToast('Zaproszenie wysłane!')
       setSearchResults([])
       setSearchQuery('')
@@ -178,14 +171,6 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
   const handleRespondInvite = async (invite, action) => {
     try {
       await api.patch(`/ggwp/team-members/${invite.id}/${action}`)
-      if (invite.leader_id) {
-        await api.post('/ggwp/notifications', {
-          user_id: invite.leader_id,
-          title: action === 'accept' ? '✅ Zaproszenie Zaakceptowane' : '❌ Zaproszenie Odrzucone',
-          message: `Gracz ${user.nickname} ${action === 'accept' ? 'dołączył do' : 'odrzucił zaproszenie do'} drużyny ${invite.team_name}.`,
-          type: 'team',
-        })
-      }
       showToast(action === 'accept' ? 'Dołączyłeś do drużyny!' : 'Zaproszenie odrzucone.')
       fetchTeamsData()
     } catch {
@@ -222,12 +207,6 @@ export default function AccountPage({ onNavigate, user, onAuthChange, initialTab
         if (others.length > 0) {
           const newLeader = others[Math.floor(Math.random() * others.length)]
           await api.patch(`/ggwp/teams/${teamId}`, { leader_id: newLeader.user_id })
-          await api.post('/ggwp/notifications', {
-            user_id: newLeader.user_id,
-            title: '👑 Zostałeś Liderem!',
-            message: `Gracz ${user.nickname} opuścił drużynę ${targetTeam.team_name}. Dowodzenie przekazano Tobie.`,
-            type: 'team',
-          })
           showToast(`Przekazałeś dowodzenie graczowi ${newLeader.nickname}`)
         } else {
           await api.delete(`/ggwp/teams/${teamId}`)

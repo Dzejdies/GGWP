@@ -281,7 +281,29 @@ export default function LoginModal({ onClose, onSuccess, initialMode = 'login' }
         setRegStatus('error')
         return
       }
-      setRegStatus('success')
+      const regData = await res.json().catch(() => ({}))
+      if (regData?.accessToken) {
+        setAccessToken(regData.accessToken)
+        onSuccess(regData.user)
+        onClose()
+        return
+      }
+
+      const loginRes = await fetch(`${BASE_URL}/ggwp/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ email: regForm.email, password: regForm.password }),
+      })
+      const loginData = await loginRes.json()
+      if (loginRes.ok) {
+        setAccessToken(loginData.accessToken)
+        onSuccess(loginData.user)
+        onClose()
+      } else {
+        setRegError('Konto z tym adresem e-mail lub nickiem już istnieje.')
+        setRegStatus('error')
+      }
     } catch {
       setRegError('Błąd połączenia. Spróbuj ponownie.')
       setRegStatus('error')
